@@ -1,0 +1,31 @@
+.navbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 6vh;
+    padding-right: 6vh;
+}
+.logo{
+    width: 18vh;
+}
+.navLinks{
+    display: flex;
+    align-items: center;
+    gap: 3vh;
+    font-weight: bold;
+    font-size: 22px;
+}
+.navLinks{
+    list-style: none;
+}
+.account{
+    background-color: var(--yellowButton);
+    padding: 8px;
+    width: 150px;
+    color: var(--white);
+    border-radius: 8vh;
+    text-align: center;
+}
+.navbarmain{
+    background-color: transparent;
+}
