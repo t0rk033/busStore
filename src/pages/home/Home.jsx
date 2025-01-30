@@ -17,57 +17,58 @@ function Home() {
          </div>
        </div>
       </div>
+
+
       <div className={styles.secondSection}>
         <div className={styles.details}>
-          <h2>Uma nova era de conveniência.</h2>
-          <p className={styles.pDetails}>Nossa loja móvel foi projetada para atender às suas demandas onde quer que você esteja. Seja na estrada ou na sua vizinhança, trazemos qualidade e facilidade até você.</p>
+          <h2>O Bus Store: Inovação e Praticidade sobre Rodas</h2>
+          <p>O Bus Store é uma loja móvel que oferece uma experiência completa e inovadora, combinando praticidade e conforto para atender às suas necessidades. Confira os destaques:</p>
+
+          <ul>
+            <li>Estrutura completa de uma loja convencional.</li>
+            <li>Interior climatizado com ar-condicionado para maior conforto.</li>
+            <li>Provador exclusivo, permitindo que você experimente os looks no momento.</li>
+            <li>Versátil: funciona como loja própria ou como espaço para locação por marcas.</li>
+            <li>Plataforma no teto para eventos especiais.</li>
+            <li>DJ e locutor durante os eventos, promovendo visibilidade, engajamento e criando experiências únicas para o público.</li>
+          </ul>
         </div>
-        <div className={styles.cards}>
-          <div className={styles.card}>
-            
-            <h3><span>1</span> Melhor Rota</h3>
-            <p>Otimizamos nossos trajetos para máxima acessibilidade</p>
-          </div>
-          <div className={styles.card}>
-            
-            <h3><span>2</span>Rotas Parceria</h3>
-            <p>Trabalhamos em conjunto com comunidades para servir melhor.</p>
-          </div>
-          <div className={styles.card}>
-            
-            <h3><span>3</span>Negócios Inovadores</h3>
-            <p>Criamos soluções únicas para clientes modernos</p>
-          </div>
-          <div className={styles.card}>
-            
-            <h3><span>4</span>Diferenciais</h3>
-            <p>Atendimento personalizado em qualquer lugar.</p>
-          </div>
-          <div className={styles.card}>
-            
-            <h3><span>5</span>Confiança Garantida</h3>
-            <p>Produtos de qualidade, entregues diretamente.</p>
-          </div>
-          <div className={styles.card}>
-            
-            <h3><span>6</span>Lorem ipsum dolor </h3>
-            <p>sit amet consectetur adipisicing elit.</p>
-          </div>
         
-        </div>
       </div>
 
       <div className={styles.thirdSection}>
-          <div className={styles.thirdSectionContainer}>
-            <h2>Soluções de mobilidade para um futuro mais conectado</h2>
-            <p>A Bus Store oferece produtos e serviços que conectam comunidades e tornam a mobilidade mais eficiente. Deixe-nos transformar sua experiência de compra</p>
-            <div className={styles.buttons}>
-          <button className={styles.reserveButton}>Reserve</button>
-          <button className={styles.thirdDetailButton}>Ver Loja</button>
-         </div>
-          </div>
-          <img src={bus} alt="Imagem de ônibus" />
+  <div className={styles.thirdSectionContainer}>
+    <h2>O Diferencial do Bus Store</h2>
+    <p>Uma experiência única que combina mobilidade, inovação e exclusividade.</p>
+
+    <div className={styles.thirdFeatures}>
+      <div className={styles.featureCard}>
+        <h3>🚀 Mobilidade</h3>
+        <p>Levamos a loja até os maiores eventos do Brasil, aproximando marcas do público.</p>
       </div>
+      <div className={styles.featureCard}>
+        <h3>🎨 Personalização</h3>
+        <p>O ônibus pode ser customizado por marcas para criar experiências exclusivas.</p>
+      </div>
+      <div className={styles.featureCard}>
+        <h3>🔊 Visibilidade</h3>
+        <p>DJ e locutor promovem engajamento e tornam o Bus Store o destaque do evento.</p>
+      </div>
+      <div className={styles.featureCard}>
+        <h3>🛍️ Conforto & Experiência</h3>
+        <p>Provadores, climatização e infraestrutura completa para uma compra diferenciada.</p>
+      </div>
+    </div>
+
+    <div className={styles.buttons}>
+      <button className={styles.reserveButton}>Reserve</button>
+      <button className={styles.thirdDetailButton}>Ver Loja</button>
+    </div>
+  </div>
+
+  
+</div>
+
 <div className={styles.eventsSection}>
   <h2>Próximos Eventos</h2>
   <p className={styles.eventsDescription}>
