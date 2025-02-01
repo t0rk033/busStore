@@ -5,36 +5,43 @@
     background-size: cover;
     background-position: right; 
     color: var(--white);
-    height: 75vh; 
+    height: 100vh; 
 }
 .firstSectionContainer{
     padding: 6vh 10vh;
 }
 .firstSectionContainer h1{
-    font-size: 48px;
-    width: 60vh;
+    font-size: 55px;
+    width: 70vh;
     color: var(--white);
+    
 }
 .firstSectionContainer p{
     width: 58vh;
     margin-bottom: 10px;
     color: #ffffffa8;
+    font-size: 16px;
 }
 .reserveButton{
     background-color: #FFC107;
     border: none;
     width: 15vh;
-    padding: 1vh;
+    padding: 1.2vh;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 20px !important;
+    transition: 0.5s;
+}
+.reserveButton:hover{
+    background-color: #b08608;
+    box-shadow: 1px 3px 6px rgba(0, 0, 0, 0.319);
 }
 .detailButton {
     background-color: transparent;
     border: 1px solid #B0BEC5;
     width: 15vh;
-    padding: 1vh;
+    padding: 1.2vh;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 20px;
     color: var(--white);
     cursor: pointer;
     transition: transform 0.3s ease, background-color 0.3s ease;
@@ -62,25 +69,35 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-   align-items: flex-end;
+    align-items: center;
+    text-align: center;
+    
+   
 }
 .secondSection h2{
     font-size: 38px;
-    text-align: center;
+}
+.secondSectionText{
+    font-size: 18px;
 }
 .details{
     gap: 30px;
     margin-bottom: 30px;
     width: 65vh;
-    background-color: rgba(255, 255, 255, 0.216);
-    padding: 30px;
+    background-color: rgba(80, 79, 79, 0.586);
+    padding: 35px;
     border-radius: 40px;
+    position: relative;
+    bottom: 1.6rem;
 }
 .pDetails{
     text-align: center;
     width: 90vh;
     color: #023047a7;
-    font-size: 14px;
+    font-size: 18px;
+}
+.secondSectionList{
+margin-top: 10px;
 }
 .cards{
     display: grid;
@@ -130,7 +147,7 @@
 }
 
 .thirdSectionContainer h2 {
-    font-size: 5vh;
+    font-size: 4.5vh;
     color: #023047;
     margin-bottom: 10px;
 }
@@ -140,20 +157,28 @@
     color: #023047a7;
     margin-bottom: 30px;
 }
+.thirdSectionText{
+    width: 62vh;
+}
 
 .thirdFeatures {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: .5fr 1fr;
+    gap: 10px;
     margin-bottom: 20px;
 }
 
 .featureCard {
     background: white;
-    padding: 20px;
+    padding: 10px;
     border-radius: 10px;
     box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
+    width: 36vh;
+}
+.featureCard p {
+    font-size: 14px;
+    color: #555;
 }
 
 .featureCard:hover {
@@ -165,9 +190,9 @@
     color: #023047;
     margin-bottom: 10px;
 }
-
-.featureCard p {
-    color: #555;
+.everyCards{
+display: flex;
+gap: 20px;
 }
 
 .thirdImageContainer {
@@ -180,9 +205,9 @@
     background-color: transparent;
     border: 1px solid #023047;
     width: 15vh;
-    padding: 1vh;
+    padding: 1.2vh;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 20px;
     color: #023047;
     cursor: pointer;
     transition: transform 0.3s ease, background-color 0.3s ease;
@@ -198,6 +223,17 @@
     flex-direction: column;
     gap: 30px;
     margin-bottom: 20px;
+}
+.secondTitle{
+    position: relative;
+    left: 44rem;
+    top: 3rem;
+}
+.firtsTitle{
+    position: relative;
+    bottom: .9rem;
+    right: 4.2rem;
+    text-align: center;
 }
 
 .eventsSection {
@@ -267,6 +303,7 @@
     background-color: #023047;
     color: var(--white);
     padding: 4vh 5vw;
+    text-align: center;
 }
 
 .footerContent {
