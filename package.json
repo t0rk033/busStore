@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://batatabowl.com.br/busstoreteste",
+  "homepage": "https://batatabowl.com.br/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
