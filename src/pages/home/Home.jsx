@@ -258,7 +258,7 @@ function Home() {
 
  
 </div>
-<div className={styles.eventsSection}>
+{/* <div className={styles.eventsSection}>
   <div className={styles.eventsContainer}>
     <div className={styles.sectionHeader}>
       <h2 className={styles.secondTitle}>Próximos Eventos</h2>
@@ -301,7 +301,7 @@ function Home() {
       </div>
     </div>
   </div>
-</div>
+</div> */}
 
       <div className={styles.footer}>
         <div className={styles.footerContent}>
