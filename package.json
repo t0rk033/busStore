@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://BatataBowl.com.br",
+  "homepage": "batataBowl.com.br",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
