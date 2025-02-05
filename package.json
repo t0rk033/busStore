@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://batatabowl.com.br/",
+  "proxy": "http://localhost:3000",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -17,6 +18,9 @@
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.4.2",
     "batatabowl": "file:",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "firebase": "^11.2.0",
     "mercadopago": "^2.3.0",
     "react": "^18.3.1",
