@@ -2,7 +2,7 @@ import React from "react";
 import styles from "./Home.module.css";
 import NavBar from "../../components/NavBar";
 import parceiros from "../../assets/images/parceiros.jpeg";
-
+import Footer from '../../components/Footer'
 function Home() {
   return (
     <div className={styles.homeContainer}>
@@ -258,6 +258,7 @@ function Home() {
 
  
 </div>
+<Footer/>
 {/* <div className={styles.eventsSection}>
   <div className={styles.eventsContainer}>
     <div className={styles.sectionHeader}>

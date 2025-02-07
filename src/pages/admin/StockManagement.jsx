@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Button, Card, CardContent, Typography, TextField, Grid } from "@mui/material";
+import { 
+  Button, Card, CardContent, Typography, TextField, Grid, 
+  Box, Chip, IconButton, Paper, Avatar, useTheme, LinearProgress 
+} from "@mui/material";
+import { Add, Edit, Delete, PhotoCamera, Inventory } from "@mui/icons-material";
 import NavBar from "../../components/NavBar";
 import Footer from "../../components/Footer";
 import { db } from "../../firebase";
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 function StockManagement() {
+  const theme = useTheme();
   const [products, setProducts] = useState([]);
   const [newProduct, setNewProduct] = useState({
     sku: "",
@@ -15,7 +20,7 @@ function StockManagement() {
     imageUrl: "",
     category: "",
     subcategory: "",
-    variations: [{ size: "", color: "", model: "", stock: 0 }], // Campo de variações
+    variations: [{ size: "", color: "", model: "", stock: 0 }],
     costPrice: "",
     salePrice: "",
     weight: "",
@@ -26,14 +31,14 @@ function StockManagement() {
   });
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // 🔥 Buscar produtos do Firestore ao carregar a página
+  // Buscar produtos do Firestore
   useEffect(() => {
     async function fetchProducts() {
       const querySnapshot = await getDocs(collection(db, "products"));
       const productsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        variations: doc.data().variations || [], // Garantir que variations exista
+        variations: doc.data().variations || [],
       }));
       setProducts(productsData);
     }
@@ -75,7 +80,7 @@ function StockManagement() {
         width: parseFloat(newProduct.dimensions.width),
         height: parseFloat(newProduct.dimensions.height),
       },
-      variations: newProduct.variations || [], // Garantir que variations exista
+      variations: newProduct.variations || [],
     };
 
     const docRef = await addDoc(collection(db, "products"), formattedProduct);
@@ -110,7 +115,7 @@ function StockManagement() {
     setEditingProduct(product);
     setNewProduct({
       ...product,
-      variations: product.variations || [], // Garantir que variations exista
+      variations: product.variations || [],
     });
   };
 
@@ -128,7 +133,7 @@ function StockManagement() {
         width: parseFloat(newProduct.dimensions.width),
         height: parseFloat(newProduct.dimensions.height),
       },
-      variations: newProduct.variations || [], // Garantir que variations exista
+      variations: newProduct.variations || [],
     };
 
     await updateDoc(doc(db, "products", editingProduct.id), updatedProduct);
@@ -156,84 +161,290 @@ function StockManagement() {
   return (
     <div>
       <NavBar />
-      <div style={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>
-        <Typography variant="h4" gutterBottom>Gerenciamento de Estoque</Typography>
+      <Box sx={{ 
+        p: 4, 
+        maxWidth: '1440px', 
+        margin: 'auto',
+        backgroundColor: theme.palette.background.default
+      }}>
+        <Box sx={{ 
+          mb: 4, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2 
+        }}>
+          <Inventory sx={{ fontSize: 40, color: theme.palette.primary.main }} />
+          <Typography variant="h4" component="h1">
+            Gerenciamento de Estoque
+          </Typography>
+        </Box>
 
-        {/* Formulário de Adição/Edição */}
-        <Grid container spacing={2}>
-          {["sku", "barcode", "name", "description", "imageUrl", "category", "subcategory", "costPrice", "salePrice", "weight"].map((field) => (
-            <Grid item xs={6} key={field}>
-              <TextField
-                label={field.charAt(0).toUpperCase() + field.slice(1)}
-                name={field}
-                value={newProduct[field]}
-                onChange={handleInputChange}
-                fullWidth
-              />
+        {/* Formulário */}
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 3, color: theme.palette.text.secondary }}>
+            {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+          </Typography>
+          
+          <Grid container spacing={3}>
+            {/* Seção de Informações Básicas */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>Informações Básicas</Typography>
+              {["sku", "barcode", "name", "category"].map((field) => (
+                <TextField
+                  key={field}
+                  label={field.charAt(0).toUpperCase() + field.slice(1)}
+                  name={field}
+                  value={newProduct[field]}
+                  onChange={handleInputChange}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                  size="small"
+                />
+              ))}
             </Grid>
-          ))}
-          {["length", "width", "height"].map((dimension) => (
-            <Grid item xs={4} key={dimension}>
-              <TextField
-                label={`Dimensão (${dimension})`}
-                name={dimension}
-                value={newProduct.dimensions[dimension]}
-                onChange={(e) => setNewProduct({ ...newProduct, dimensions: { ...newProduct.dimensions, [dimension]: e.target.value } })}
-                fullWidth
-              />
+
+            {/* Seção de Imagem */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>Imagem do Produto</Typography>
+              <Box sx={{ 
+                border: '1px dashed', 
+                borderColor: theme.palette.divider,
+                borderRadius: 1,
+                p: 2,
+                textAlign: 'center'
+              }}>
+                {newProduct.imageUrl ? (
+                  <img 
+                    src={newProduct.imageUrl} 
+                    alt="Preview" 
+                    style={{ 
+                      maxWidth: '200px', 
+                      maxHeight: '200px',
+                      borderRadius: theme.shape.borderRadius,
+                      cursor: 'pointer'
+                    }}
+                  />
+                ) : (
+                  <Box sx={{ color: theme.palette.text.secondary }}>
+                    <PhotoCamera sx={{ fontSize: 40 }} />
+                    <Typography>URL da Imagem</Typography>
+                  </Box>
+                )}
+                <TextField
+                  fullWidth
+                  name="imageUrl"
+                  value={newProduct.imageUrl}
+                  onChange={handleInputChange}
+                  sx={{ mt: 2 }}
+                  size="small"
+                />
+              </Box>
             </Grid>
-          ))}
-          <Grid item xs={12}>
-            <Typography variant="h6">Variações</Typography>
-            {newProduct.variations.map((variation, index) => (
-              <Grid container spacing={2} key={index}>
-                {["size", "color", "model", "stock"].map((field) => (
-                  <Grid item xs={3} key={field}>
+
+            {/* Seção de Preços e Dimensões */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>Preços e Dimensões</Typography>
+              <Grid container spacing={2}>
+                {["costPrice", "salePrice", "weight"].map((field) => (
+                  <Grid item xs={4} key={field}>
                     <TextField
-                      label={field.charAt(0).toUpperCase() + field.slice(1)}
-                      value={variation[field]}
-                      onChange={(e) => handleVariationChange(index, field, e.target.value)}
+                      label={field === 'costPrice' ? 'Preço de Custo' : field === 'salePrice' ? 'Preço de Venda' : 'Peso'}
+                      name={field}
+                      value={newProduct[field]}
+                      onChange={handleInputChange}
                       fullWidth
+                      type="number"
+                      InputProps={{
+                        startAdornment: field.includes('Price') && 'R$'
+                      }}
+                      size="small"
+                    />
+                  </Grid>
+                ))}
+                {["length", "width", "height"].map((dimension) => (
+                  <Grid item xs={4} key={dimension}>
+                    <TextField
+                      label={`Dimensão (${dimension})`}
+                      name={dimension}
+                      value={newProduct.dimensions[dimension]}
+                      onChange={(e) => setNewProduct({ 
+                        ...newProduct, 
+                        dimensions: { ...newProduct.dimensions, [dimension]: e.target.value } 
+                      })}
+                      fullWidth
+                      type="number"
+                      size="small"
                     />
                   </Grid>
                 ))}
               </Grid>
-            ))}
-            <Button onClick={addVariation} style={{ marginTop: "10px" }}>Adicionar Variação</Button>
-          </Grid>
-        </Grid>
+            </Grid>
 
-        <div style={{ marginTop: "10px" }}>
-          {editingProduct ? (
-            <Button variant="contained" color="secondary" onClick={updateProduct}>Atualizar</Button>
-          ) : (
-            <Button variant="contained" color="primary" onClick={addProduct}>Adicionar</Button>
-          )}
-        </div>
+            {/* Seção de Variações */}
+            <Grid item xs={12}>
+              <Box sx={{ 
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1,
+                p: 2
+              }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 2 
+                }}>
+                  <Typography variant="subtitle1">Variações</Typography>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<Add />} 
+                    onClick={addVariation}
+                    size="small"
+                  >
+                    Adicionar Variação
+                  </Button>
+                </Box>
+                
+                {newProduct.variations.map((variation, index) => (
+                  <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2}>
+                      {["size", "color", "model", "stock"].map((field) => (
+                        <Grid item xs={3} key={field}>
+                          <TextField
+                            label={field.charAt(0).toUpperCase() + field.slice(1)}
+                            value={variation[field]}
+                            onChange={(e) => handleVariationChange(index, field, e.target.value)}
+                            fullWidth
+                            size="small"
+                            type={field === 'stock' ? 'number' : 'text'}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+                ))}
+              </Box>
+            </Grid>
+
+            {/* Botões de Ação */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                {editingProduct ? (
+                  <>
+                    <Button 
+                      variant="contained" 
+                      color="secondary" 
+                      onClick={updateProduct}
+                      startIcon={<Edit />}
+                    >
+                      Atualizar
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      onClick={() => setEditingProduct(null)}
+                    >
+                      Cancelar
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={addProduct}
+                    startIcon={<Add />}
+                  >
+                    Adicionar Produto
+                  </Button>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
 
         {/* Lista de Produtos */}
-        <Grid container spacing={2} style={{ marginTop: "20px" }}>
-          {products.map((product) => (
-            <Grid item xs={12} sm={6} key={product.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6">{product.name}</Typography>
-                  <Typography variant="body1">SKU: {product.sku}</Typography>
-                  <Typography variant="body1">Preço de Venda: R$ {Number(product.salePrice).toFixed(2)}</Typography>
-                  <Typography variant="body1">
-                    Estoque Total: {product.variations?.reduce((acc, curr) => acc + (curr.stock || 0), 0)}
-                  </Typography>
-                  {product.imageUrl && <img src={product.imageUrl} alt={product.name} style={{ width: "100px", marginTop: "10px" }} />}
-                  <div style={{ marginTop: "10px" }}>
-                    <Button variant="outlined" color="primary" onClick={() => startEditing(product)} style={{ marginRight: "5px" }}>Editar</Button>
-                    <Button variant="outlined" color="secondary" onClick={() => deleteProduct(product.id)}>Excluir</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+        <Typography variant="h6" sx={{ mb: 3 }}>Produtos em Estoque ({products.length})</Typography>
+        <Grid container spacing={3}>
+          {products.map((product) => {
+            const totalStock = product.variations?.reduce((acc, curr) => acc + (curr.stock || 0), 0);
+            const stockPercentage = (totalStock / product.minStock) * 100;
+
+            return (
+              <Grid item xs={12} sm={6} md={4} key={product.id}>
+                <Card sx={{ 
+                  height: '100%', 
+                  transition: 'transform 0.2s',
+                  '&:hover': { transform: 'translateY(-4px)' }
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Avatar 
+                        src={product.imageUrl} 
+                        variant="rounded"
+                        sx={{ width: 80, height: 80 }}
+                      >
+                        <PhotoCamera />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6">{product.name}</Typography>
+                        <Chip 
+                          label={product.category} 
+                          size="small" 
+                          sx={{ mt: 1 }} 
+                          color="primary"
+                        />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={stockPercentage} 
+                        color={totalStock < product.minStock ? 'error' : 'primary'}
+                        sx={{ height: 8, borderRadius: 4 }}
+                      />
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        mt: 1 
+                      }}>
+                        <Typography variant="caption">
+                          Estoque: {totalStock}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          Mín: {product.minStock}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      gap: 1 
+                    }}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={() => startEditing(product)}
+                        fullWidth
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<Delete />}
+                        onClick={() => deleteProduct(product.id)}
+                        fullWidth
+                      >
+                        Excluir
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+          )}
         </Grid>
-      </div>
+      </Box>
       <Footer />
     </div>
   );
