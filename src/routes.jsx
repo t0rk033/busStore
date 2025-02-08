@@ -7,6 +7,7 @@ import StockManagement from './pages/admin/StockManagement';
 import Reservations from './pages/reservations/Reservations';
 import Login from './pages/login/Login';
 import Signup from './pages/login/Signup';
+import AdminHome from './pages/admin/adminHome';
 
 function RoutesApp() {
   return (
@@ -19,6 +20,7 @@ function RoutesApp() {
           <Route path='/reservas' element={<Reservations/>} />
           <Route path='/login' element={<Login/>}/>
           <Route path="/registro" element={<Signup />} />
+          <Route path='/admin' element={<AdminHome/>} />
         </Routes>
       </HashRouter>
     </CartProvider>

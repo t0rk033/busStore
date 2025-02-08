@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Button, Card, CardContent, Typography, TextField, Grid, 
-  Box, Chip, IconButton, Paper, Avatar, useTheme, LinearProgress 
+import {
+  Button, Card, CardContent, Typography, TextField, Grid,
+  Box, Chip, IconButton, Paper, Avatar, useTheme, LinearProgress
 } from "@mui/material";
 import { Add, Edit, Delete, PhotoCamera, Inventory } from "@mui/icons-material";
 import NavBar from "../../components/NavBar";
 import Footer from "../../components/Footer";
 import { db } from "../../firebase";
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 
 function StockManagement() {
   const theme = useTheme();
   const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [totalSales, setTotalSales] = useState(0);
   const [newProduct, setNewProduct] = useState({
     sku: "",
     barcode: "",
@@ -33,16 +35,33 @@ function StockManagement() {
 
   // Buscar produtos do Firestore
   useEffect(() => {
-    async function fetchProducts() {
-      const querySnapshot = await getDocs(collection(db, "products"));
+    const unsubscribeProducts = onSnapshot(collection(db, "products"), (querySnapshot) => {
       const productsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         variations: doc.data().variations || [],
       }));
       setProducts(productsData);
-    }
-    fetchProducts();
+    });
+
+    return () => unsubscribeProducts();
+  }, []);
+
+  // Buscar vendas do Firestore e calcular o total vendido
+  useEffect(() => {
+    const unsubscribeSales = onSnapshot(collection(db, "sales"), (querySnapshot) => {
+      const salesData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setSales(salesData);
+
+      // Calcular o total vendido
+      const total = salesData.reduce((acc, sale) => acc + sale.total, 0);
+      setTotalSales(total);
+    });
+
+    return () => unsubscribeSales();
   }, []);
 
   // Atualiza campos do formulário
@@ -161,17 +180,17 @@ function StockManagement() {
   return (
     <div>
       <NavBar />
-      <Box sx={{ 
-        p: 4, 
-        maxWidth: '1440px', 
+      <Box sx={{
+        p: 4,
+        maxWidth: '1440px',
         margin: 'auto',
         backgroundColor: theme.palette.background.default
       }}>
-        <Box sx={{ 
-          mb: 4, 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 2 
+        <Box sx={{
+          mb: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
         }}>
           <Inventory sx={{ fontSize: 40, color: theme.palette.primary.main }} />
           <Typography variant="h4" component="h1">
@@ -179,12 +198,41 @@ function StockManagement() {
           </Typography>
         </Box>
 
-        {/* Formulário */}
+        {/* Exibir o total vendido */}
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Total Vendido: R$ {totalSales.toFixed(2)}
+          </Typography>
+        </Paper>
+
+        {/* Histórico de Vendas */}
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Histórico de Vendas
+          </Typography>
+          <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {sales.map((sale) => (
+              <Box key={sale.id} sx={{ mb: 2, p: 2, borderBottom: '1px solid #ddd' }}>
+                <Typography variant="subtitle1">
+                  Data: {new Date(sale.date?.toDate()).toLocaleString()}
+                </Typography>
+                <Typography variant="body2">
+                  Total: R$ {sale.total.toFixed(2)}
+                </Typography>
+                <Typography variant="body2">
+                  Itens: {sale.items.map((item) => `${item.name} (${item.quantity}x)`).join(', ')}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
+
+        {/* Formulário de Produtos */}
         <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 3, color: theme.palette.text.secondary }}>
             {editingProduct ? 'Editar Produto' : 'Novo Produto'}
           </Typography>
-          
+
           <Grid container spacing={3}>
             {/* Seção de Informações Básicas */}
             <Grid item xs={12} md={6}>
@@ -206,19 +254,19 @@ function StockManagement() {
             {/* Seção de Imagem */}
             <Grid item xs={12} md={6}>
               <Typography variant="subtitle1" sx={{ mb: 2 }}>Imagem do Produto</Typography>
-              <Box sx={{ 
-                border: '1px dashed', 
+              <Box sx={{
+                border: '1px dashed',
                 borderColor: theme.palette.divider,
                 borderRadius: 1,
                 p: 2,
                 textAlign: 'center'
               }}>
                 {newProduct.imageUrl ? (
-                  <img 
-                    src={newProduct.imageUrl} 
-                    alt="Preview" 
-                    style={{ 
-                      maxWidth: '200px', 
+                  <img
+                    src={newProduct.imageUrl}
+                    alt="Preview"
+                    style={{
+                      maxWidth: '200px',
                       maxHeight: '200px',
                       borderRadius: theme.shape.borderRadius,
                       cursor: 'pointer'
@@ -267,9 +315,9 @@ function StockManagement() {
                       label={`Dimensão (${dimension})`}
                       name={dimension}
                       value={newProduct.dimensions[dimension]}
-                      onChange={(e) => setNewProduct({ 
-                        ...newProduct, 
-                        dimensions: { ...newProduct.dimensions, [dimension]: e.target.value } 
+                      onChange={(e) => setNewProduct({
+                        ...newProduct,
+                        dimensions: { ...newProduct.dimensions, [dimension]: e.target.value }
                       })}
                       fullWidth
                       type="number"
@@ -282,28 +330,28 @@ function StockManagement() {
 
             {/* Seção de Variações */}
             <Grid item xs={12}>
-              <Box sx={{ 
+              <Box sx={{
                 border: `1px solid ${theme.palette.divider}`,
                 borderRadius: 1,
                 p: 2
               }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  mb: 2 
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 2
                 }}>
                   <Typography variant="subtitle1">Variações</Typography>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<Add />} 
+                  <Button
+                    variant="outlined"
+                    startIcon={<Add />}
                     onClick={addVariation}
                     size="small"
                   >
                     Adicionar Variação
                   </Button>
                 </Box>
-                
+
                 {newProduct.variations.map((variation, index) => (
                   <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
                     <Grid container spacing={2}>
@@ -330,25 +378,25 @@ function StockManagement() {
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 {editingProduct ? (
                   <>
-                    <Button 
-                      variant="contained" 
-                      color="secondary" 
+                    <Button
+                      variant="contained"
+                      color="secondary"
                       onClick={updateProduct}
                       startIcon={<Edit />}
                     >
                       Atualizar
                     </Button>
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       onClick={() => setEditingProduct(null)}
                     >
                       Cancelar
                     </Button>
                   </>
                 ) : (
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
+                  <Button
+                    variant="contained"
+                    color="primary"
                     onClick={addProduct}
                     startIcon={<Add />}
                   >
@@ -369,15 +417,15 @@ function StockManagement() {
 
             return (
               <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card sx={{ 
-                  height: '100%', 
+                <Card sx={{
+                  height: '100%',
                   transition: 'transform 0.2s',
                   '&:hover': { transform: 'translateY(-4px)' }
                 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <Avatar 
-                        src={product.imageUrl} 
+                      <Avatar
+                        src={product.imageUrl}
                         variant="rounded"
                         sx={{ width: 80, height: 80 }}
                       >
@@ -385,26 +433,26 @@ function StockManagement() {
                       </Avatar>
                       <Box>
                         <Typography variant="h6">{product.name}</Typography>
-                        <Chip 
-                          label={product.category} 
-                          size="small" 
-                          sx={{ mt: 1 }} 
+                        <Chip
+                          label={product.category}
+                          size="small"
+                          sx={{ mt: 1 }}
                           color="primary"
                         />
                       </Box>
                     </Box>
 
                     <Box sx={{ mb: 2 }}>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={stockPercentage} 
+                      <LinearProgress
+                        variant="determinate"
+                        value={stockPercentage}
                         color={totalStock < product.minStock ? 'error' : 'primary'}
                         sx={{ height: 8, borderRadius: 4 }}
                       />
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        mt: 1 
+                      <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        mt: 1
                       }}>
                         <Typography variant="caption">
                           Estoque: {totalStock}
@@ -415,10 +463,10 @@ function StockManagement() {
                       </Box>
                     </Box>
 
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      gap: 1 
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 1
                     }}>
                       <Button
                         variant="outlined"
@@ -441,8 +489,8 @@ function StockManagement() {
                   </CardContent>
                 </Card>
               </Grid>
-            )}
-          )}
+            );
+          })}
         </Grid>
       </Box>
       <Footer />

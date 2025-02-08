@@ -5,7 +5,7 @@ import ProductModal from './ProductModal';
 import NavBar from '../../components/NavBar';
 import Footer from '../../components/Footer';
 import { db } from '../../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -58,20 +58,16 @@ function Store() {
             },
             onSubmit: async (cardFormData) => {
               try {
-                // Extrai o email diretamente do formulário do Mercado Pago
                 const { token, payer: { email } } = cardFormData;
-
-                console.log('Token:', token);
-                console.log('Email:', email);
 
                 // Envie os dados para o seu backend
                 const response = await fetch('http://localhost:3000/api/process-payment', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    token, // Token de pagamento gerado pelo Mercado Pago
-                    amount: total, // Valor total da compra
-                    email, // Email coletado pelo próprio Mercado Pago
+                    token,
+                    amount: total,
+                    email,
                   }),
                 });
 
@@ -81,21 +77,65 @@ function Store() {
                 }
 
                 const data = await response.json();
-                console.log('Resposta do backend:', data);
 
-                alert('Pagamento realizado com sucesso!');
-                emptyCart();
-                onClose();
+                if (data.status === 'approved') {
+                  // Atualizar o estoque no Firestore para cada item do carrinho
+                  const updateStockPromises = items.map(async (item) => {
+                    const productRef = doc(db, "products", item.id);
+                    const productDoc = await getDoc(productRef);
+
+                    if (productDoc.exists()) {
+                      const currentStock = productDoc.data().variations[0].stock; // Assumindo que há apenas uma variação
+                      const newStock = currentStock - item.quantity;
+
+                      if (newStock >= 0) {
+                        await updateDoc(productRef, {
+                          variations: [{ ...productDoc.data().variations[0], stock: newStock }]
+                        });
+                        console.log(`Estoque atualizado para o produto ${item.id}. Novo estoque: ${newStock}`);
+                      } else {
+                        console.error(`Estoque insuficiente para o produto ${item.id}.`);
+                        throw new Error(`Estoque insuficiente para o produto ${item.id}.`);
+                      }
+                    } else {
+                      console.error(`Produto ${item.id} não encontrado no Firestore.`);
+                      throw new Error(`Produto ${item.id} não encontrado no Firestore.`);
+                    }
+                  });
+
+                  await Promise.all(updateStockPromises);
+
+                  // Salvar os dados da venda na coleção "sales"
+                  const saleData = {
+                    total: cartTotal, // Valor total da compra
+                    items: items.map(item => ({
+                      id: item.id,
+                      name: item.name,
+                      quantity: item.quantity,
+                      price: item.price,
+                    })),
+                    date: serverTimestamp(), // Data e hora da compra
+                    email: email, // Email do cliente
+                  };
+
+                  await addDoc(collection(db, "sales"), saleData);
+
+                  alert('Pagamento aprovado e estoque atualizado com sucesso!');
+                  emptyCart();
+                  onClose();
+                } else {
+                  alert('Pagamento não aprovado.');
+                }
               } catch (error) {
-                console.error('Erro no pagamento:', error);
-                alert(error.message || 'Erro ao processar pagamento');
+                console.error('Erro no pagamento ou atualização do estoque:', error);
+                alert(error.message || 'Erro ao processar pagamento ou atualizar estoque.');
               }
             },
           },
         });
         setFormInitialized(true);
       }
-    }, [mp, open, total, formInitialized]);
+    }, [mp, open, total, formInitialized, items]);
 
     return (
       <div className={`${styles.paymentModal} ${open ? styles.open : ''}`}>

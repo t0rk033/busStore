@@ -11,8 +11,8 @@ function NavBar() {
               <nav className={styles.navbarContainer}>
                 <ul className={styles.navLinks}>
                   <Link to='/'>Inicio</Link>
-                  <Link to="loja"> Loja</Link>
-                  <Link to='reservas'>Reservas</Link>
+                  <Link to="/loja"> Loja</Link>
+                  <Link to='/reservas'>Reservas</Link>
                   <li className={styles.account}>conta</li>
                 </ul>
               </nav> 
