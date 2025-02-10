@@ -6,6 +6,7 @@ import NavBar from '../../components/NavBar';
 import Footer from '../../components/Footer';
 import { db } from '../../firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -14,11 +15,33 @@ function Store() {
   const [openProductModal, setOpenProductModal] = useState(false);
   const [openCartModal, setOpenCartModal] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
 
+  // Monitora estado de autenticação e carrega dados do usuário
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Carrega produtos
   useEffect(() => {
     async function fetchProducts() {
       const querySnapshot = await getDocs(collection(db, "products"));
-      const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), variations: doc.data().variations || [] }));
+      const productsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        variations: doc.data().variations || []
+      }));
       setProducts(productsData);
     }
     fetchProducts();
@@ -28,30 +51,27 @@ function Store() {
     const [mp, setMp] = useState(null);
     const [formInitialized, setFormInitialized] = useState(false);
 
+    // Configura Mercado Pago
     useEffect(() => {
       if (open && !mp) {
         const script = document.createElement('script');
         script.src = 'https://sdk.mercadopago.com/js/v2';
         script.onload = () => setMp(new window.MercadoPago('TEST-d4b57614-bf60-4dac-b391-944a48b68160', { locale: 'pt-BR' }));
         document.body.appendChild(script);
-
         return () => document.body.removeChild(script);
       }
     }, [open, mp]);
 
+    // Processamento do pagamento
     useEffect(() => {
       if (mp && open && !formInitialized) {
         mp.bricks().create('cardPayment', 'payment-form', {
           initialization: {
             amount: total,
-            payer: {
-              email: "", // Configuração para o Mercado Pago coletar o email
-            },
+            payer: { email: user?.email || "" },
           },
           callbacks: {
-            onReady: () => {
-              console.log('Brick está pronto');
-            },
+            onReady: () => console.log('Brick está pronto'),
             onError: (error) => {
               console.error('Erro no brick:', error);
               alert('Erro ao inicializar o formulário de pagamento. Tente novamente.');
@@ -60,82 +80,92 @@ function Store() {
               try {
                 const { token, payer: { email } } = cardFormData;
 
-                // Envie os dados para o seu backend
+                // Envia para backend
                 const response = await fetch('http://localhost:3000/api/process-payment', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    token,
-                    amount: total,
-                    email,
-                  }),
+                  body: JSON.stringify({ token, amount: total, email }),
                 });
-
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  throw new Error(errorText || 'Erro no processamento do pagamento');
-                }
 
                 const data = await response.json();
 
                 if (data.status === 'approved') {
-                  // Atualizar o estoque no Firestore para cada item do carrinho
+                  // Atualiza estoque
                   const updateStockPromises = items.map(async (item) => {
                     const productRef = doc(db, "products", item.id);
                     const productDoc = await getDoc(productRef);
 
                     if (productDoc.exists()) {
-                      const currentStock = productDoc.data().variations[0].stock; // Assumindo que há apenas uma variação
+                      const currentStock = productDoc.data().variations[0].stock;
                       const newStock = currentStock - item.quantity;
 
                       if (newStock >= 0) {
                         await updateDoc(productRef, {
                           variations: [{ ...productDoc.data().variations[0], stock: newStock }]
                         });
-                        console.log(`Estoque atualizado para o produto ${item.id}. Novo estoque: ${newStock}`);
-                      } else {
-                        console.error(`Estoque insuficiente para o produto ${item.id}.`);
-                        throw new Error(`Estoque insuficiente para o produto ${item.id}.`);
                       }
-                    } else {
-                      console.error(`Produto ${item.id} não encontrado no Firestore.`);
-                      throw new Error(`Produto ${item.id} não encontrado no Firestore.`);
                     }
                   });
 
                   await Promise.all(updateStockPromises);
 
-                  // Salvar os dados da venda na coleção "sales"
+                  // Prepara dados da venda
                   const saleData = {
-                    total: cartTotal, // Valor total da compra
+                    total: cartTotal,
                     items: items.map(item => ({
                       id: item.id,
                       name: item.name,
                       quantity: item.quantity,
                       price: item.price,
                     })),
-                    date: serverTimestamp(), // Data e hora da compra
-                    email: email, // Email do cliente
+                    date: serverTimestamp(),
+                    payment: {
+                      method: 'Mercado Pago',
+                      status: 'approved',
+                      transactionId: data.transactionId || 'N/A'
+                    }
                   };
 
-                  await addDoc(collection(db, "sales"), saleData);
+                  // Salva os dados da venda na coleção "sales"
+                  const saleRef = await addDoc(collection(db, "sales"), saleData);
 
-                  alert('Pagamento aprovado e estoque atualizado com sucesso!');
+                  // Salva os dados do cliente na subcoleção "client"
+                  const clientData = {
+                    userId: user?.uid || null,
+                    name: userData?.fullName || "Cliente não autenticado",
+                    email: user?.email || email,
+                    phone: userData?.phone || "Não informado"
+                  };
+
+                  const clientRef = await addDoc(collection(db, "sales", saleRef.id, "client"), clientData);
+
+                  // Salva os dados do endereço na subcoleção "address"
+                  const addressData = userData?.address || {
+                    street: "Não informado",
+                    number: "S/N",
+                    complement: "",
+                    neighborhood: "Não informado",
+                    city: "Não informado",
+                    state: "Não informado",
+                    zipCode: "Não informado"
+                  };
+
+                  await addDoc(collection(db, "sales", saleRef.id, "client", clientRef.id, "address"), addressData);
+
+                  alert('Compra finalizada com sucesso!');
                   emptyCart();
                   onClose();
-                } else {
-                  alert('Pagamento não aprovado.');
                 }
               } catch (error) {
-                console.error('Erro no pagamento ou atualização do estoque:', error);
-                alert(error.message || 'Erro ao processar pagamento ou atualizar estoque.');
+                console.error('Erro no processo:', error);
+                alert(error.message || 'Erro ao processar pagamento');
               }
             },
           },
         });
         setFormInitialized(true);
       }
-    }, [mp, open, total, formInitialized, items]);
+    }, [mp, open, total, formInitialized, items, user, userData]);
 
     return (
       <div className={`${styles.paymentModal} ${open ? styles.open : ''}`}>
@@ -152,7 +182,7 @@ function Store() {
       <NavBar />
       <div className={styles.storeContainer}>
         <div className={styles.productGrid}>
-          {products.length === 0 ? <p>Carregando produtos...</p> : products.map(product => (
+          {products.map(product => (
             <div key={product.id} className={styles.productCard}>
               <img
                 src={product.imageUrl}
@@ -179,7 +209,9 @@ function Store() {
         <div className={`${styles.cartModal} ${openCartModal ? styles.open : ''}`}>
           <div className={styles.cartContent}>
             <h2 className={styles.cartTitle}>Carrinho de Compras</h2>
-            {items.length === 0 ? <div className={styles.cartEmpty}>Seu carrinho está vazio.</div> : (
+            {items.length === 0 ? (
+              <div className={styles.cartEmpty}>Seu carrinho está vazio.</div>
+            ) : (
               items.map(item => (
                 <div key={item.id} className={styles.cartItem}>
                   <div className={styles.cartItemName}>{item.name} - R$ {item.price.toFixed(2)}</div>

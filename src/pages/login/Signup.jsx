@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaLock, FaIdCard, FaPhone, FaMapMarker, FaBirthdayCake } from 'react-icons/fa';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'; // Adicionado updateProfile
 import { auth, db } from '../../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { cpf } from 'cpf-cnpj-validator';
@@ -158,6 +158,11 @@ function Signup() {
         formData.email, 
         formData.password
       );
+
+      // Definir o displayName no Firebase Authentication
+      await updateProfile(userCredential.user, {
+        displayName: formData.fullName
+      });
 
       // Salvar dados adicionais no Firestore
       await setDoc(doc(db, 'users', userCredential.user.uid), {

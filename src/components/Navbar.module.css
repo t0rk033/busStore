@@ -41,3 +41,22 @@
 .navbarmain{
     background-color: transparent;
 }
+
+.account {
+    display: flex;
+    align-items: center;
+  }
+  
+  .logoutButton {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .logoutButton:hover {
+    text-decoration: underline;
+  }

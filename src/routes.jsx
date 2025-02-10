@@ -8,9 +8,11 @@ import Reservations from './pages/reservations/Reservations';
 import Login from './pages/login/Login';
 import Signup from './pages/login/Signup';
 import AdminHome from './pages/admin/adminHome';
+import { AuthProvider } from './AuthContext';
 
 function RoutesApp() {
   return (
+    <AuthProvider>
     <CartProvider> {/* Envolvendo toda a aplicação */}
       <HashRouter>
         <Routes>
@@ -24,6 +26,7 @@ function RoutesApp() {
         </Routes>
       </HashRouter>
     </CartProvider>
+    </AuthProvider>
   );
 }
 
