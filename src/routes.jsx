@@ -9,6 +9,7 @@ import Login from './pages/login/Login';
 import Signup from './pages/login/Signup';
 import AdminHome from './pages/admin/adminHome';
 import { AuthProvider } from './AuthContext';
+import Profile from './pages/users/Profile';
 
 function RoutesApp() {
   return (
@@ -23,6 +24,7 @@ function RoutesApp() {
           <Route path='/login' element={<Login/>}/>
           <Route path="/registro" element={<Signup />} />
           <Route path='/admin' element={<AdminHome/>} />
+          <Route path ='/perfil' element={<Profile/>} />
         </Routes>
       </HashRouter>
     </CartProvider>

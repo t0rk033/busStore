@@ -4,6 +4,9 @@ import {
   Box, Chip, Paper, Avatar, useTheme, LinearProgress, IconButton,
   Accordion, AccordionSummary, AccordionDetails, Divider, Badge
 } from "@mui/material";
+import BusinessIcon from '@mui/icons-material/Business';
+import ContactsIcon from '@mui/icons-material/Contacts';
+import LinkIcon from '@mui/icons-material/Link';
 import { 
   Add, Edit, Delete, PhotoCamera, Inventory, LocalShipping,
   ExpandMore, Search, TrendingUp, Label, Description, Paid,
@@ -15,6 +18,7 @@ import { db } from "../../firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs } from "firebase/firestore";
 import ShippedOrders from "./ShippedOrders";
 import styles from './StockManagement.module.css';
+
 function StockManagement() {
   const theme = useTheme();
   const [products, setProducts] = useState([]);
@@ -22,23 +26,22 @@ function StockManagement() {
   const [totalSales, setTotalSales] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [newProduct, setNewProduct] = useState({
-    sku: "",
-    barcode: "",
-    name: "",
-    description: "",
-    imageUrl: "",
-    category: "",
-    subcategory: "",
-    variations: [{ size: "", color: "", model: "", stock: 0 }],
-    costPrice: "",
-    salePrice: "",
-    weight: "",
-    dimensions: { length: "", width: "", height: "" },
-    minStock: 0,
-    location: "",
-    reservedStock: 0,
+    sku: "", barcode: "", name: "", description: "", imageUrl: "",
+    category: "", subcategory: "", variations: [{ size: "", color: "", model: "", stock: 0 }],
+    costPrice: "", salePrice: "", weight: "", dimensions: { length: "", width: "", height: "" },
+    minStock: 1, location: "", reservedStock: 0
   });
   const [editingProduct, setEditingProduct] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
+const [newSupplier, setNewSupplier] = useState({
+  name: "",
+  contact: "",
+  email: "",
+  phone: "",
+  address: "",
+  productsSupplied: []
+});
+const [editingSupplier, setEditingSupplier] = useState(null);
 
   // =================== Firebase Operations ===================
   useEffect(() => {
@@ -62,6 +65,16 @@ function StockManagement() {
           const addressQuery = await getDocs(collection(db, "sales", doc.id, "client", clientQuery.docs[0].id, "address"));
           addressData = addressQuery.docs.map(addressDoc => addressDoc.data())[0];
         }
+        // Adicione no useEffect existente
+const unsubscribeSuppliers = onSnapshot(collection(db, "suppliers"), (snapshot) => {
+  const suppliersData = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  setSuppliers(suppliersData);
+});
+
+
 
         return {
           id: doc.id,
@@ -70,6 +83,7 @@ function StockManagement() {
           client: clientData,
           address: addressData
         };
+        unsubscribeSuppliers();
       }));
 
       setSales(salesData);
@@ -81,11 +95,15 @@ function StockManagement() {
       unsubscribeSales();
     };
   }, []);
+ 
 
   // =================== Product Functions ===================
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewProduct(prev => ({ ...prev, [name]: value }));
+    setNewProduct(prev => ({ 
+      ...prev, 
+      [name]: name === 'supplierId' ? value : value 
+    }));
   };
 
   const addVariation = () => {
@@ -151,7 +169,55 @@ function StockManagement() {
       variations: product.variations || []
     });
   };
+ // =================== Fornecedores Functions ===================
 
+ const handleSupplierInputChange = (e) => {
+  const { name, value } = e.target;
+  setNewSupplier(prev => ({ ...prev, [name]: value }));
+};
+
+const saveSupplier = async () => {
+  try {
+    if (editingSupplier) {
+      await updateDoc(doc(db, "suppliers", editingSupplier.id), newSupplier);
+      setSuppliers(prev => 
+        prev.map(s => s.id === editingSupplier.id ? { ...newSupplier, id: editingSupplier.id } : s)
+      );
+    } else {
+      const docRef = await addDoc(collection(db, "suppliers"), newSupplier);
+      setSuppliers(prev => [...prev, { ...newSupplier, id: docRef.id }]);
+    }
+    resetSupplierForm();
+  } catch (error) {
+    console.error("Error saving supplier:", error);
+  }
+};
+
+const deleteSupplier = async (id) => {
+  try {
+    await deleteDoc(doc(db, "suppliers", id));
+    setSuppliers(prev => prev.filter(s => s.id !== id));
+  } catch (error) {
+    console.error("Error deleting supplier:", error);
+  }
+};
+
+const resetSupplierForm = () => {
+  setNewSupplier({
+    name: "",
+    contact: "",
+    email: "",
+    phone: "",
+    address: "",
+    productsSupplied: []
+  });
+  setEditingSupplier(null);
+};
+
+const startEditingSupplier = (supplier) => {
+  setEditingSupplier(supplier);
+  setNewSupplier(supplier);
+};
   // =================== Order Functions ===================
   const markAsShipped = async (saleId) => {
     try {
@@ -168,7 +234,7 @@ function StockManagement() {
       sku: "", barcode: "", name: "", description: "", imageUrl: "",
       category: "", subcategory: "", variations: [{ size: "", color: "", model: "", stock: 0 }],
       costPrice: "", salePrice: "", weight: "", dimensions: { length: "", width: "", height: "" },
-      minStock: 0, location: "", reservedStock: 0
+      minStock: 0, location: "", reservedStock: 0, supplierId: ""
     });
     setEditingProduct(null);
   };
@@ -177,8 +243,6 @@ function StockManagement() {
   return (
     <div className={styles.container}>
       <NavBar />
-      
-      
       <Box sx={{ 
         p: 4, 
         maxWidth: 1440, 
@@ -187,7 +251,6 @@ function StockManagement() {
         '& .MuiCard-root': { borderRadius: 4 },
         '& .MuiPaper-root': { borderRadius: 4 }
       }}>
-        
         {/* Dashboard Header */}
         <Box sx={{ 
           display: 'flex', 
@@ -351,6 +414,28 @@ function StockManagement() {
                         </Grid>
                       ))}
                     </Grid>
+                    <Grid item xs={12} md={6}>
+  <TextField
+    select
+    label="Fornecedor"
+    name="supplierId"
+    value={newProduct.supplierId}
+    onChange={handleInputChange}
+    fullWidth
+    size="small"
+    variant="filled"
+    SelectProps={{
+      native: true,
+    }}
+  >
+    <option value=""></option>
+    {suppliers.map((supplier) => (
+      <option key={supplier.id} value={supplier.id}>
+        {supplier.name}
+      </option>
+    ))}
+  </TextField>
+</Grid>
                   </Grid>
 
                   <Grid item xs={12}>
@@ -457,8 +542,137 @@ function StockManagement() {
             </Accordion>
           </CardContent>
         </Card>
+        <Card sx={{ mb: 4 }}>
+  <CardContent>
+    <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+      Lista de Fornecedores
+      <Chip 
+        label={`${suppliers.length} cadastrados`} 
+        size="small" 
+        sx={{ ml: 2, bgcolor: 'action.selected' }} 
+      />
+    </Typography>
+    
+    <Grid container spacing={3}>
+      {suppliers.map(supplier => {
+        const suppliedProducts = products.filter(p => p.supplierId === supplier.id);
+        
+        return (
+          <Grid item xs={12} md={6} key={supplier.id}>
+            <Card variant="outlined">
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="600">
+                      {supplier.name}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {supplier.contact}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton onClick={() => startEditingSupplier(supplier)}>
+                      <Edit fontSize="small" color="info"/>
+                    </IconButton>
+                    <IconButton onClick={() => deleteSupplier(supplier.id)}>
+                      <Delete fontSize="small" color="error"/>
+                    </IconButton>
+                  </Box>
+                </Box>
 
+                <Box sx={{ mt: 2 }}>
+                  <Chip
+                    icon={<LinkIcon/>}
+                    label={`Fornece ${suppliedProducts.length} produtos`}
+                    variant="outlined"
+                    sx={{ mb: 1 }}
+                  />
+                  <Typography variant="body2">
+                    <ContactsIcon fontSize="small" sx={{ mr: 1 }}/>
+                    {supplier.email} | {supplier.phone}
+                  </Typography>
+                  <Typography variant="body2">
+                    <BusinessIcon fontSize="small" sx={{ mr: 1 }}/>
+                    {supplier.address}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        );
+      })}
+    </Grid>
+  </CardContent>
+</Card>
+<Card sx={{ mb: 4 }}>
+  <CardContent>
+    <Accordion elevation={0}>
+      <AccordionSummary expandIcon={<ExpandMore />}>
+        <Typography variant="h6" fontWeight="600">
+          {editingSupplier ? 'Editar Fornecedor' : 'Novo Fornecedor'}
+        </Typography>
+      </AccordionSummary>
+      
+      <AccordionDetails>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <BusinessIcon fontSize="small" color="primary"/>
+              <Typography variant="subtitle1" color="primary">Informações do Fornecedor</Typography>
+            </Box>
+            <Grid container spacing={2}>
+              {["name", "contact", "email", "phone", "address"].map((field) => (
+                <Grid item xs={12} md={6} key={field}>
+                  <TextField
+                    label={field.charAt(0).toUpperCase() + field.slice(1)}
+                    name={field}
+                    value={newSupplier[field]}
+                    onChange={handleSupplierInputChange}
+                    fullWidth
+                    size="small"
+                    variant="filled"
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              justifyContent: 'flex-end',
+              borderTop: 1,
+              borderColor: 'divider',
+              pt: 3
+            }}>
+              {editingSupplier && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Cancel />}
+                  onClick={resetSupplierForm}
+                >
+                  Cancelar Edição
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                startIcon={editingSupplier ? <CheckCircle /> : <Add />}
+                onClick={saveSupplier}
+                sx={{ minWidth: 200 }}
+              >
+                {editingSupplier ? 'Salvar Alterações' : 'Adicionar Fornecedor'}
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </AccordionDetails>
+    </Accordion>
+  </CardContent>
+</Card>
         {/* Product List */}
+        
         <Card>
           <CardContent>
             <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
@@ -471,114 +685,117 @@ function StockManagement() {
             </Typography>
             
             <Grid container spacing={3}>
-              {products.map(product => {
-                const totalStock = product.variations?.reduce((acc, curr) => acc + (curr.stock || 0), 0);
-                const isLowStock = totalStock < product.minStock;
+             {products.map(product => {
+  const totalStock = product.variations?.reduce((acc, curr) => acc + (curr.stock || 0), 0);
+  const isLowStock = totalStock < product.minStock;
 
-                return (
-                  <Grid item xs={12} sm={6} md={4} key={product.id}>
-                    <Card variant="outlined" sx={{ 
-                      position: 'relative',
-                      '&:hover': { boxShadow: 4 }
-                    }}>
-                      {isLowStock && (
-                        <Chip
-                          label="Baixo Estoque"
-                          color="error"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            right: 16, 
-                            top: 16,
-                            fontWeight: 600
-                          }}
-                        />
-                      )}
-                      
-                      <CardContent>
-                        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                          <Avatar 
-                            src={product.imageUrl} 
-                            variant="rounded" 
-                            sx={{ 
-                              width: 80, 
-                              height: 80,
-                              bgcolor: 'background.paper'
-                            }}
-                          >
-                            <PhotoCamera sx={{ color: 'text.disabled' }}/>
-                          </Avatar>
-                          
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight="600">
-                              {product.name}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              SKU: {product.sku}
-                            </Typography>
-                            <Chip 
-                              label={product.category} 
-                              size="small" 
-                              sx={{ 
-                                mt: 1,
-                                bgcolor: 'primary.light',
-                                color: 'primary.dark'
-                              }}
-                            />
-                          </Box>
-                        </Box>
+  return (
+    <Grid item xs={12} sm={6} md={4} key={product.id}>
+      <Card variant="outlined" sx={{ 
+        position: 'relative',
+        '&:hover': { boxShadow: 4 }
+      }}>
+        {/* Chip de Baixo Estoque */}
+        {isLowStock && (
+          <Chip
+            label="Baixo Estoque"
+            color="error"
+            size="small"
+            sx={{ 
+              position: 'absolute', 
+              right: 16, 
+              top: 16,
+              fontWeight: 600
+            }}
+          />
+        )}
+        
+        <CardContent>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Avatar 
+              src={product.imageUrl} 
+              variant="rounded" 
+              sx={{ 
+                width: 80, 
+                height: 80,
+                bgcolor: 'background.paper'
+              }}
+            >
+              <PhotoCamera sx={{ color: 'text.disabled' }}/>
+            </Avatar>
+            
+            <Box>
+              <Typography variant="subtitle1" fontWeight="600">
+                {product.name}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                SKU: {product.sku}
+              </Typography>
+              <Chip 
+                label={product.category} 
+                size="small" 
+                sx={{ 
+                  mt: 1,
+                  bgcolor: 'primary.light',
+                  color: 'primary.dark'
+                }}
+              />
+            </Box>
+          </Box>
 
-                        <Box sx={{ mb: 2 }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={(totalStock / (product.minStock || 1)) * 100}
-                            color={isLowStock ? 'error' : 'primary'}
-                            sx={{ height: 8, borderRadius: 4 }}
-                          />
-                          <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            mt: 1
-                          }}>
-                            <Typography variant="caption">
-                              Estoque: <strong>{totalStock}</strong>
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              Mín: {product.minStock}
-                            </Typography>
-                          </Box>
-                        </Box>
+          {/* Barra de Progresso */}
+          <Box sx={{ mb: 2 }}>
+            <LinearProgress
+              variant="determinate"
+              value={(totalStock / (product.minStock || 1)) * 100}
+              color={isLowStock ? 'error' : 'primary'}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              mt: 1
+            }}>
+              <Typography variant="caption">
+                Estoque: <strong>{totalStock}</strong>
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                Mín: {product.minStock}
+              </Typography>
+            </Box>
+          </Box>
 
-                        <Box sx={{ 
-                          display: 'flex', 
-                          gap: 1,
-                          '& .MuiButton-root': {
-                            flex: 1,
-                            py: 1
-                          }
-                        }}>
-                          <Button
-                            variant="outlined"
-                            startIcon={<Edit />}
-                            onClick={() => startEditing(product)}
-                            color="info"
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            startIcon={<Delete />}
-                            onClick={() => deleteProduct(product.id)}
-                          >
-                            Excluir
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
+          {/* Botões de Ação */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1,
+            '& .MuiButton-root': {
+              flex: 1,
+              py: 1
+            }
+          }}>
+            <Button
+              variant="outlined"
+              startIcon={<Edit />}
+              onClick={() => startEditing(product)}
+              color="info"
+            >
+              Editar
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Delete />}
+              onClick={() => deleteProduct(product.id)}
+            >
+              Excluir
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+    </Grid>
+  );
+})}
             </Grid>
           </CardContent>
         </Card>
@@ -590,8 +807,3 @@ function StockManagement() {
 }
 
 export default StockManagement;
-
-
-
-
-

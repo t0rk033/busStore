@@ -20,7 +20,7 @@ function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       alert('Login realizado com sucesso!');
       // Redirecionar o usuário após o login
-      window.location.href = '/dashboard'; // Altere para a rota desejada
+      window.location.href = '/#/perfil'; // Altere para a rota desejada
     } catch (err) {
       setError('Email ou senha incorretos.');
       console.error(err);
