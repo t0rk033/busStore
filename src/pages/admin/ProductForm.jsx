@@ -1,159 +1,118 @@
-import React from "react";
-import {
-  Box,
-  Typography,
-  Grid,
-  TextField,
-  Button,
-  Paper,
-} from "@mui/material";
-import { Add, Edit, PhotoCamera } from "@mui/icons-material";
-import styles from './StockManagement.module.css';
+import React from 'react';
+import { Grid, TextField, Button, Box, Typography, Divider, Chip, Paper } from "@mui/material";
+import { Add, CheckCircle, Cancel } from "@mui/icons-material";
 
-const ProductForm = ({
-  newProduct,
-  handleInputChange,
-  handleVariationChange,
-  addVariation,
-  saveProduct,
-  resetForm,
-}) => {
+const ProductForm = ({ newProduct, editingProduct, handleInputChange, addVariation, handleVariationChange, saveProduct, resetForm }) => {
   return (
-    <Paper elevation={3} sx={{ p: 3, my: 4 }}>
-      <Typography variant="h6" sx={{ mb: 3 }}>
-        {newProduct.id ? "Editar Produto" : "Novo Produto"}
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* Informações Básicas */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Informações Básicas
-          </Typography>
-          {["sku", "barcode", "name", "category"].map((field) => (
-            <TextField
-              key={field}
-              label={field.charAt(0).toUpperCase() + field.slice(1)}
-              name={field}
-              value={newProduct[field]}
-              onChange={handleInputChange}
-              fullWidth
-              sx={{ mb: 2 }}
-              size="small"
-            />
-          ))}
-        </Grid>
-
-        {/* Imagem do Produto */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Imagem do Produto
-          </Typography>
-          <Box className={styles.imagePreview}>
-            {newProduct.imageUrl ? (
-              <img src={newProduct.imageUrl} alt="Preview" className={styles.imagePreview} />
-            ) : (
-              <Box sx={{ color: "text.secondary" }}>
-                <PhotoCamera sx={{ fontSize: 40 }} />
-                <Typography>URL da Imagem</Typography>
-              </Box>
-            )}
-            <TextField
-              fullWidth
-              name="imageUrl"
-              value={newProduct.imageUrl}
-              onChange={handleInputChange}
-              sx={{ mt: 2 }}
-              size="small"
-            />
-          </Box>
-        </Grid>
-
-        {/* Preços e Dimensões */}
-        <Grid item xs={12}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Preços e Dimensões
-          </Typography>
-          <Grid container spacing={2}>
-            {["costPrice", "salePrice", "weight"].map((field) => (
-              <Grid item xs={4} key={field}>
-                <TextField
-                  label={field === "costPrice" ? "Preço de Custo" : field === "salePrice" ? "Preço de Venda" : "Peso"}
-                  name={field}
-                  value={newProduct[field]}
-                  onChange={handleInputChange}
-                  fullWidth
-                  type="number"
-                  InputProps={{ startAdornment: field.includes("Price") && "R$" }}
-                  size="small"
-                />
-              </Grid>
-            ))}
-            {["length", "width", "height"].map((dim) => (
-              <Grid item xs={4} key={dim}>
-                <TextField
-                  label={`Dimensão (${dim})`}
-                  name={dim}
-                  value={newProduct.dimensions[dim]}
-                  onChange={(e) =>
-                    handleInputChange({
-                      target: { name: "dimensions", value: { ...newProduct.dimensions, [dim]: e.target.value } },
-                    })
-                  }
-                  fullWidth
-                  type="number"
-                  size="small"
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Grid>
-
-        {/* Variações */}
-        <Grid item xs={12}>
-          <Box className={styles.variationSection}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-              <Typography variant="subtitle1" className={styles.variationTitle}>
-                Variações
-              </Typography>
-              <Button variant="outlined" startIcon={<Add />} onClick={addVariation} size="small">
-                Adicionar Variação
-              </Button>
-            </Box>
-            {newProduct.variations.map((variation, index) => (
-              <Paper key={index} elevation={1} sx={{ p: 2, mb: 2 }}>
+    <Card sx={{ mb: 4 }}>
+      <CardContent>
+        <Accordion defaultExpanded elevation={0}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Typography variant="h6" fontWeight="600">
+              {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+            </Typography>
+          </AccordionSummary>
+          
+          <AccordionDetails>
+            <Grid container spacing={3}>
+              {/* Seções do formulário melhoradas com ícones e divisores */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <Label fontSize="small" color="primary"/>
+                  <Typography variant="subtitle1" color="primary">Informações Básicas</Typography>
+                </Box>
                 <Grid container spacing={2}>
-                  {["size", "color", "model", "stock"].map((field) => (
-                    <Grid item xs={3} key={field}>
+                  {["sku", "barcode", "name", "category"].map((field) => (
+                    <Grid item xs={12} md={6} key={field}>
                       <TextField
-                        label={field.charAt(0).toUpperCase() + field.slice(1)}
-                        value={variation[field]}
-                        onChange={(e) => handleVariationChange(index, field, e.target.value)}
+                        label={field === 'sku' ? 'SKU' : field.charAt(0).toUpperCase() + field.slice(1)}
+                        name={field}
+                        value={newProduct[field]}
+                        onChange={handleInputChange}
                         fullWidth
                         size="small"
-                        type={field === "stock" ? "number" : "text"}
+                        variant="filled"
                       />
                     </Grid>
                   ))}
                 </Grid>
-              </Paper>
-            ))}
-          </Box>
-        </Grid>
+              </Grid>
 
-        {/* Ações do Formulário */}
-        <Grid item xs={12}>
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-            <Button variant="contained" onClick={saveProduct} startIcon={<Edit />}>
-              {newProduct.id ? "Atualizar" : "Salvar"}
-            </Button>
-            <Button variant="outlined" onClick={resetForm}>
-              Cancelar
-            </Button>
-          </Box>
-        </Grid>
-      </Grid>
-    </Paper>
+              <Grid item xs={12}>
+                <Divider sx={{ my: 3 }}/>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <Paid fontSize="small" color="primary"/>
+                  <Typography variant="subtitle1" color="primary">Preços e Dimensões</Typography>
+                </Box>
+                <Grid container spacing={2}>
+                  {["costPrice", "salePrice", "weight"].map((field) => (
+                    <Grid item xs={4} key={field}>
+                      <TextField
+                        label={field === 'costPrice' ? 'Preço de Custo' : field === 'salePrice' ? 'Preço de Venda' : 'Peso'}
+                        name={field}
+                        value={newProduct[field]}
+                        onChange={handleInputChange}
+                        fullWidth
+                        type="number"
+                        InputProps={{ startAdornment: field.includes('Price') && 'R$' }}
+                        size="small"
+                      />
+                    </Grid>
+                  ))}
+                  {["length", "width", "height"].map((dim) => (
+                    <Grid item xs={4} key={dim}>
+                      <TextField
+                        label={`Dimensão (${dim})`}
+                        name={dim}
+                        value={newProduct.dimensions[dim]}
+                        onChange={e => setNewProduct(prev => ({
+                          ...prev,
+                          dimensions: { ...prev.dimensions, [dim]: e.target.value }
+                        }))}
+                        fullWidth
+                        type="number"
+                        size="small"
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Grid>
+
+              {/* Seção de Ações do Formulário */}
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  justifyContent: 'flex-end',
+                  borderTop: 1,
+                  borderColor: 'divider',
+                  pt: 3
+                }}>
+                  {editingProduct && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<Cancel />}
+                      onClick={resetForm}
+                    >
+                      Cancelar Edição
+                    </Button>
+                  )}
+                  <Button
+                    variant="contained"
+                    startIcon={editingProduct ? <CheckCircle /> : <Add />}
+                    onClick={saveProduct}
+                    sx={{ minWidth: 200 }}
+                  >
+                    {editingProduct ? 'Confirmar Alterações' : 'Adicionar Produto'}
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      </CardContent>
+    </Card>
   );
 };
 

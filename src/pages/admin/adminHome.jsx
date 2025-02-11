@@ -2,6 +2,9 @@ import React from 'react';
 import styles from './AdminHome.module.css'; // Importando o CSS Module para estilos
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { PieChart, Pie, Legend } from 'recharts';
+import StatsCards from './StatsCards';
+
+
 
 // Componentes principais do Dashboard
 const DashboardCard = ({ title, value }) => {
@@ -40,6 +43,8 @@ const Header = () => {
 };
 
 const AdminHome = () => {
+
+    
   const data = [
     { name: 'Jan', value: 400 },
     { name: 'Feb', value: 300 },
@@ -53,12 +58,7 @@ const AdminHome = () => {
       <Sidebar />
       <div className={styles.content}>
         <Header />
-        <div className={styles.cardsContainer}>
-          <DashboardCard title="Usuários" value="1200" />
-          <DashboardCard title="Vendas" value="R$ 12.000" />
-          <DashboardCard title="Pedidos Pendentes" value="15" />
-          <DashboardCard title="Produto em Estoque" value="80" />
-        </div>
+        <StatsCards/>
 
         <div className={styles.charts}>
           <div className={styles.chartContainer}>
