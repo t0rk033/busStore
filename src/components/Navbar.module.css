@@ -83,6 +83,7 @@
   
   .navbarmain.scrolled .logoutButton {
     color: black;
+    text-align: center !important;
   }
   
   .navbarmain.scrolled .logoutButton:hover {

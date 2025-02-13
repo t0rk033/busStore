@@ -1,0 +1,2 @@
+1 - Tela de sair não está redirecionando para inicio
+2- Melhorar estrutura de pagamentos

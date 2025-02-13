@@ -40,11 +40,11 @@ function NavBar() {
             <Link to='/reservas'>Reservas</Link>
             <div className={styles.account}>
               {userLoggedIn ? (
-                <button onClick={handleLogout} className={styles.logoutButton}>
-                  Sair
-                </button>
+                <Link to='/perfil' className={styles.logoutButton}>
+                  Conta
+                </Link>
               ) : (
-                <Link to="/registro">Conta</Link>
+                <Link to="/registro">Entrar</Link>
               )}
             </div>
           </ul>
