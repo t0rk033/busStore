@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import styles from './Navbar.module.css';
 import logo from '../assets/images/logo.png';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 
 function NavBar() {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const auth = getAuth();
 
@@ -27,7 +30,7 @@ function NavBar() {
   };
 
   return (
-    <div className={styles.navbarmain}>
+    <div className={`${styles.navbarmain} ${!isHomePage ? styles.scrolled : ''}`}>
       <div className={styles.navbar}>
         <img src={logo} alt="Logo" className={styles.logo} />
         <nav className={styles.navbarContainer}>

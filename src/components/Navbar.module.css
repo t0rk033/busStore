@@ -60,3 +60,31 @@
   .logoutButton:hover {
     text-decoration: underline;
   }
+
+
+  .navbarmain {
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+  }
+  
+  .navbarmain.scrolled {
+    background-color: var(--primary-color);
+   box-shadow: 1px 4px 6px black !important;
+  }
+  
+  .navbarmain.scrolled .navLinks a {
+    color: var(--white);
+  }
+  
+  .navbarmain.scrolled .account {
+    background-color: var(--secondary-color);
+    color: black;
+  }
+  
+  .navbarmain.scrolled .logoutButton {
+    color: black;
+  }
+  
+  .navbarmain.scrolled .logoutButton:hover {
+    text-decoration: underline;
+  }
