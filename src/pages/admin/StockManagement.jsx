@@ -539,6 +539,9 @@ const handleSubcategoryChange = (index, value) => {
                   fullWidth
                   size="small"
                   variant="filled"
+                  SelectProps={{
+                    native: true,
+                  }}
                 >
                   <option value=""></option>
                   {categories.map((category) => (
@@ -561,6 +564,9 @@ const handleSubcategoryChange = (index, value) => {
                   size="small"
                   variant="filled"
                   disabled={!newProduct.category} // Desabilita se não houver categoria selecionada
+                  SelectProps={{
+                    native: true,
+                  }}
                 >
                   <option value=""></option>
                   {categories
