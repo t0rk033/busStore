@@ -36,7 +36,6 @@ app.post('/api/process-payment', async (req, res) => {
       token,
       description: 'Compra na loja',
       installments: 1,
-      payment_method_id: 'visa',
       payer: { email },
     };
 

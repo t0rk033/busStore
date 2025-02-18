@@ -3,12 +3,14 @@ import styles from './Navbar.module.css';
 import logo from '../assets/images/logo.png';
 import { Link, useLocation } from 'react-router-dom';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { FaBars } from 'react-icons/fa'; // Importando ícone de hambúrguer
 
 function NavBar() {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
   const [userLoggedIn, setUserLoggedIn] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu
   const auth = getAuth();
 
   useEffect(() => {
@@ -29,12 +31,19 @@ function NavBar() {
     }
   };
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen); // Alternar a visibilidade do menu
+  };
+
   return (
     <div className={`${styles.navbarmain} ${!isHomePage ? styles.scrolled : ''}`}>
       <div className={styles.navbar}>
         <img src={logo} alt="Logo" className={styles.logo} />
         <nav className={styles.navbarContainer}>
-          <ul className={styles.navLinks}>
+          <div className={styles.menuIcon} onClick={toggleMenu}>
+            <FaBars /> {/* Ícone de hambúrguer */}
+          </div>
+          <ul className={`${styles.navLinks} ${isMenuOpen ? styles.open : ''}`}>
             <Link to='/'>Inicio</Link>
             <Link to="/loja">Loja</Link>
             <Link to='/reservas'>Reservas</Link>
