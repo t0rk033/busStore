@@ -984,81 +984,121 @@ const handleSubcategoryChange = (index, value) => {
             </>
           )}
 
-          {activeView === 'orders' && (
-            <>
-              {/* Seção de Pedidos */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <LocalShipping sx={{ 
-                    fontSize: 40, 
-                    color: theme.palette.primary.main,
-                    bgcolor: theme.palette.primary.light,
-                    p: 1.5,
-                    borderRadius: 4
-                  }}/>
-                  <Typography variant="h4" fontWeight="700">Gestão de Pedidos</Typography>
-                </Box>
-              </Box>
+{activeView === 'orders' && (
+  <>
+    {/* Seção de Pedidos */}
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <LocalShipping sx={{ 
+          fontSize: 40, 
+          color: theme.palette.primary.main,
+          bgcolor: theme.palette.primary.light,
+          p: 1.5,
+          borderRadius: 4
+        }}/>
+        <Typography variant="h4" fontWeight="700">Gestão de Pedidos</Typography>
+      </Box>
+    </Box>
 
-              <Card sx={{ mb: 4 }}>
-                <CardContent>
+    <Card sx={{ mb: 4 }}>
+      <CardContent>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3 
+        }}>
+          <Typography variant="h6" fontWeight="600">
+            Pedidos Pendentes ({sales.filter(s => !s.shipped).length})
+          </Typography>
+          <Chip 
+            label="Atualizado agora" 
+            size="small" 
+            color="success" 
+            variant="outlined"
+            icon={<CheckCircle fontSize="small"/>}
+          />
+        </Box>
+        
+        <Grid container spacing={2}>
+          {sales.filter(s => !s.shipped).map(sale => {
+            // Dados do cliente
+            const userDetails = sale.user?.details || {}; // Subcoleção `details` dentro de `user`
+            const userAddress = sale.user?.details.address || {}; // Subcoleção `address` dentro de `user`
+
+            return (
+              <Grid item xs={12} key={sale.id}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
                   <Box sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    mb: 3 
+                    alignItems: 'center'
                   }}>
-                    <Typography variant="h6" fontWeight="600">
-                      Pedidos Pendentes ({sales.filter(s => !s.shipped).length})
-                    </Typography>
-                    <Chip 
-                      label="Atualizado agora" 
-                      size="small" 
-                      color="success" 
-                      variant="outlined"
-                      icon={<CheckCircle fontSize="small"/>}
-                    />
+                    <Box>
+                      <Typography variant="subtitle2" color="textSecondary">
+                        #{sale.id.slice(0,8).toUpperCase()} • {sale.date?.toLocaleDateString('pt-BR')}
+                      </Typography>
+                      <Typography variant="body1" fontWeight="500">
+                        {userDetails.fullName || "Cliente não identificado"}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {sale.items.length} itens • R$ {sale.total.toFixed(2)}
+                      </Typography>
+                    </Box>
+                    
+                    <Button
+                      variant="contained"
+                      startIcon={<LocalShipping />}
+                      onClick={() => markAsShipped(sale.id)}
+                      sx={{ borderRadius: 3 }}
+                    >
+                      Marcar como Enviado
+                    </Button>
                   </Box>
-                  
-                  <Grid container spacing={2}>
-                    {sales.filter(s => !s.shipped).map(sale => (
-                      <Grid item xs={12} key={sale.id}>
-                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center'
-                          }}>
-                            <Box>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                #{sale.id.slice(0,8).toUpperCase()} • {sale.date?.toLocaleDateString('pt-BR')}
-                              </Typography>
-                              <Typography variant="body1" fontWeight="500">
-                                {sale.client?.name}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                {sale.items.length} itens • R$ {sale.total.toFixed(2)}
-                              </Typography>
-                            </Box>
-                            
-                            <Button
-                              variant="contained"
-                              startIcon={<LocalShipping />}
-                              onClick={() => markAsShipped(sale.id)}
-                              sx={{ borderRadius: 3 }}
-                            >
-                              Marcar como Enviado
-                            </Button>
+                  {/* Detalhes do Pedido */}
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle2">Detalhes do Pedido</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Typography variant="h6" sx={{ mb: 2 }}>Informações do Cliente</Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Typography variant="body1"><strong>Nome:</strong> {userDetails.fullName || "N/A"}</Typography>
+                            <Typography variant="body1"><strong>CPF:</strong> {userDetails.cpf || "N/A"}</Typography>
+                            <Typography variant="body1"><strong>Telefone:</strong> {userDetails.phone || "N/A"}</Typography>
+                            <Typography variant="body1"><strong>Endereço:</strong> {userAddress.street ? `${userAddress.street}, ${userAddress.number} - ${userAddress.neighborhood}, ${userAddress.city} - ${userAddress.state}` : "N/A"}</Typography>
+                            <Typography variant="body1"><strong>CEP:</strong> {userAddress.zipCode || "N/A"}</Typography>
                           </Box>
-                        </Paper>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Typography variant="h6" sx={{ mb: 2 }}>Itens do Pedido</Typography>
+                          {sale.items.map((item, index) => (
+                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                              <Avatar src={item.imageUrl} variant="rounded" />
+                              <Box>
+                                <Typography variant="body1">{item.name}</Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                  Quantidade: {item.quantity} • Preço: R$ {item.price.toFixed(2)}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Grid>
                       </Grid>
-                    ))}
-                  </Grid>
-                </CardContent>
-              </Card>
-              <ShippedOrders/>
-            </>
-          )}
+                    </AccordionDetails>
+                  </Accordion>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </CardContent>
+    </Card>
+    <ShippedOrders/>
+  </>
+)}
         </Box>
         {activeView === 'reports' && (
   <SalesStockReports sales={sales} products={products} />
