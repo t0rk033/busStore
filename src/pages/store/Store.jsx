@@ -5,11 +5,17 @@ import { db } from '../../firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
-import Footer from '../../components/Footer'
+import Footer from '../../components/Footer';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [openProductModal, setOpenProductModal] = useState(false);
   const [openCartModal, setOpenCartModal] = useState(false);
@@ -50,12 +56,38 @@ function Store() {
           variations: doc.data().variations || []
         }));
         setProducts(productsData);
+        setFilteredProducts(productsData); // Inicialmente, todos os produtos são exibidos
+
+        // Extrai categorias únicas dos produtos
+        const uniqueCategories = [...new Set(productsData.map(product => product.category))];
+        setCategories(uniqueCategories);
       } catch (error) {
         showToast('Erro ao carregar produtos', 'error');
       }
     }
     fetchProducts();
   }, [showToast]);
+
+  // Filtra produtos com base nos critérios
+  useEffect(() => {
+    const filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
+      const matchesPrice = (minPrice ? product.salePrice >= parseFloat(minPrice) : true) &&
+                          (maxPrice ? product.salePrice <= parseFloat(maxPrice) : true);
+
+      return matchesSearch && matchesCategory && matchesPrice;
+    });
+    setFilteredProducts(filtered);
+  }, [searchTerm, selectedCategory, minPrice, maxPrice, products]);
+
+  // Limpa filtros
+  const clearFilters = () => {
+    setSearchTerm('');
+    setMinPrice('');
+    setMaxPrice('');
+    setSelectedCategory('');
+  };
 
   // Verifica estoque antes de permitir o pagamento
   const checkStock = useCallback(async () => {
@@ -215,7 +247,7 @@ function Store() {
 
   return (
     <div>
-      <NavBar/>
+      <NavBar />
       <div className={styles.storeContainer}>
         {/* Toast */}
         {toast.show && (
@@ -224,9 +256,53 @@ function Store() {
           </div>
         )}
 
-        {/* Produtos */}
+        {/* Barra de Pesquisa e Filtros */}
+        <div className={styles.filterContainer}>
+          <input
+            type="text"
+            placeholder="Pesquisar por nome..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={styles.searchInput}
+          />
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className={styles.categoryFilter}
+          >
+            <option value="">Todas as Categorias</option>
+            {categories.map(category => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Preço Mínimo"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className={styles.priceFilter}
+          />
+
+          <input
+            type="number"
+            placeholder="Preço Máximo"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className={styles.priceFilter}
+          />
+
+          <button onClick={clearFilters} className={styles.clearFiltersButton}>
+            Limpar Filtros
+          </button>
+        </div>
+
+        {/* Lista de Produtos Filtrados */}
         <div className={styles.productGrid}>
-          {products.map(product => (
+          {filteredProducts.map(product => (
             <div key={product.id} className={styles.productCard}>
               <img
                 src={product.imageUrl}
@@ -235,6 +311,7 @@ function Store() {
                 onClick={() => { setSelectedProduct(product); setOpenProductModal(true); }}
               />
               <div className={styles.productName}>{product.name}</div>
+              <div className={styles.productCategory}>{product.category}</div>
               <div className={styles.productPrice}>R$ {product.salePrice.toFixed(2)}</div>
               <button
                 className={styles.addToCartButton}
@@ -315,7 +392,7 @@ function Store() {
         {/* Modal de Pagamento */}
         <PaymentModal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)} total={cartTotal} />
       </div>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

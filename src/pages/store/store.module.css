@@ -266,20 +266,34 @@
     background: rgba(0, 0, 0, 0.5);
     display: none;
     z-index: 1002;
+    overflow: auto;
+
   }
   
   .paymentModal.open {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: auto;
+  }
+  #payment-form {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    overflow: auto;
   }
   
   .paymentContent {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
     width: 90%;
     max-width: 500px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    overflow-y: auto; /* Adiciona rolagem se necessário */
   }
   
   #form-checkout {
@@ -293,6 +307,7 @@
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    overflow-y: auto;
   }
 
 
@@ -323,3 +338,52 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+
+  .filterContainer {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .searchInput,
+  .categoryFilter,
+  .priceFilter {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  
+  .clearFiltersButton {
+    padding: 10px 15px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .clearFiltersButton:hover {
+    background-color: #ff1a1a;
+  }
+  
+  .productCategory {
+    font-size: 14px;
+    color: #555;
+    margin-top: 5px;
+  }
+
+  @media (max-width: 600px) {
+    .paymentContent {
+      width: 95%;
+      max-width: 100%;
+      padding: 15px;
+    }
+  
+    #payment-form {
+      max-width: 100%;
+    }
+  }
+  

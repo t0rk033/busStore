@@ -19,7 +19,7 @@ function RoutesApp() {
         <Routes>
           <Route path='/' element={<Home />} />
           <Route path='loja' element={<Store />} />
-          <Route path='/estoque' element={<StockManagement />} />
+          <Route path='/admin' element={<StockManagement />} />
           <Route path='/reservas' element={<Reservations/>} />
           <Route path='/login' element={<Login/>}/>
           <Route path="/registro" element={<Signup />} />

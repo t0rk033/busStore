@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   Button, Card, CardContent, Typography, TextField, Grid,
   Box, Chip, Paper, Avatar, useTheme, LinearProgress, IconButton,
-  Accordion, AccordionSummary, AccordionDetails, Divider, Badge
+  Accordion, AccordionSummary, AccordionDetails, Divider, Badge,
+  Select,
+  MenuItem
 } from "@mui/material";
 import BusinessIcon from '@mui/icons-material/Business';
 import ContactsIcon from '@mui/icons-material/Contacts';
@@ -10,7 +12,8 @@ import LinkIcon from '@mui/icons-material/Link';
 import { 
   Add, Edit, Delete, PhotoCamera, Inventory, LocalShipping,
   ExpandMore, Search, TrendingUp, Label, Description, Paid,
-  Scale, Straighten, Storage, Warning, CheckCircle, Cancel
+  Scale, Straighten, Storage, Warning, CheckCircle, Cancel,
+  Print
 } from "@mui/icons-material";
 import NavBar from "../../components/NavBar";
 import Footer from "../../components/Footer";
@@ -19,6 +22,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs } fr
 import ShippedOrders from "./ShippedOrders";
 import SalesStockReports from './SalesStockReports';
 import styles from './StockManagement.module.css';
+import ImageUpload from '../../components/ImageUpload'
 
 function StockManagement() {
   const theme = useTheme();
@@ -28,10 +32,21 @@ function StockManagement() {
   const [totalSales, setTotalSales] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [newProduct, setNewProduct] = useState({
-    sku: "", barcode: "", name: "", description: "", imageUrl: "",
-    category: "", subcategory: "", variations: [{ size: "", color: "", model: "", stock: 0 }],
-    costPrice: "", salePrice: "", weight: "", dimensions: { length: "", width: "", height: "" },
-    minStock: 1, location: "", reservedStock: 0
+    sku: "",
+    barcode: "",
+    name: "",
+    description: "",
+    imageUrl: "",
+    category: "",
+    subcategory: "",
+    variations: [{ size: "", color: "", model: "", stock: 0 }],
+    costPrice: "",
+    salePrice: "",
+    weight: "",
+    dimensions: { length: "", width: "", height: "" },
+    minStock: 1,
+    location: "",
+    reservedStock: 0
   });
   const [editingProduct, setEditingProduct] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
@@ -50,6 +65,21 @@ const [newCategory, setNewCategory] = useState({
   subcategories: [] // Lista de subcategorias
 });
 const [editingCategory, setEditingCategory] = useState(null); // Categoria em edição
+
+const [filter, setFilter] = useState("all");
+const [search, setSearch] = useState("");
+const [notes, setNotes] = useState({});
+
+const handleNoteChange = (id, value) => {
+  setNotes(prev => ({ ...prev, [id]: value }));
+};
+
+const filteredSales = sales.filter(sale => {
+  if (filter !== "all" && (filter === "shipped") !== sale.shipped) return false;
+  if (search && !sale.user?.details.fullName.toLowerCase().includes(search.toLowerCase()) && !sale.id.includes(search)) return false;
+  return true;
+});
+
 
   // =================== Firebase Operations ===================
   useEffect(() => {
@@ -111,6 +141,14 @@ const [editingCategory, setEditingCategory] = useState(null); // Categoria em ed
   }, []);
   // =================== categories Functions ===================
   // Salvar ou editar categoria
+  const deleteCategory = async (id) => {
+    try {
+      await deleteDoc(doc(db, "categories", id));
+      setCategories(prev => prev.filter(cat => cat.id !== id));
+    } catch (error) {
+      console.error("Error deleting category:", error);
+    }
+  };
 const saveCategory = async () => {
   try {
     const categoryData = {
@@ -148,7 +186,11 @@ const resetCategoryForm = () => {
 // Iniciar edição de uma categoria
 const startEditingCategory = (category) => {
   setEditingCategory(category);
-  setNewCategory(category);
+  setNewCategory({
+    name: category.name,
+    subcategories: category.subcategories || [] // Garanta que subcategorias seja um array
+  });
+  console.log("editando")
 };
 
 // Adicionar subcategoria
@@ -439,61 +481,114 @@ const handleSubcategoryChange = (index, value) => {
                   <Card sx={{ mb: 4 }}>
   <CardContent>
     <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
-      {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+      Lista de Categorias
+      <Chip 
+        label={`${categories.length} categorias`} 
+        size="small" 
+        sx={{ ml: 2, bgcolor: 'action.selected' }} 
+      />
     </Typography>
-    <Grid container spacing={2}>
-      <Grid item xs={12}>
-        <TextField
-          label="Nome da Categoria"
-          value={newCategory.name}
-          onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-          fullWidth
-          size="small"
-        />
-      </Grid>
-      <Grid item xs={12}>
-        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="subtitle1">Subcategorias</Typography>
-            <Button variant="outlined" startIcon={<Add />} onClick={addSubcategory} size="small">
-              Adicionar Subcategoria
-            </Button>
-          </Box>
-          {newCategory.subcategories.map((subcat, index) => (
-            <TextField
-              key={index}
-              label={`Subcategoria ${index + 1}`}
-              value={subcat}
-              onChange={(e) => handleSubcategoryChange(index, e.target.value)}
-              fullWidth
-              size="small"
-              sx={{ mb: 2 }}
-            />
-          ))}
-        </Box>
-      </Grid>
-      <Grid item xs={12}>
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          {editingCategory && (
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Cancel />}
-              onClick={resetCategoryForm}
-            >
-              Cancelar Edição
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            startIcon={<CheckCircle />}
-            onClick={saveCategory}
-          >
-            {editingCategory ? 'Salvar Alterações' : 'Adicionar Categoria'}
-          </Button>
-        </Box>
-      </Grid>
+    <Grid container spacing={3}>
+      {categories.map(category => (
+        <Grid item xs={12} sm={6} md={4} key={category.id}>
+          <Card variant="outlined" sx={{ 
+            position: 'relative',
+            '&:hover': { boxShadow: 4 }
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="600">
+                    {category.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Subcategorias: {category.subcategories.length}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButton onClick={() => startEditingCategory(category)}>
+                    <Edit fontSize="small" color="info"/>
+                  </IconButton>
+                  <IconButton onClick={() => deleteCategory(category.id)}>
+                    <Delete fontSize="small" color="error"/>
+                  </IconButton>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
     </Grid>
+
+    {/* Formulário de Edição de Categoria */}
+    {editingCategory && (
+      <Card sx={{ mt: 4 }}>
+        <CardContent>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+            {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                label="Nome da Categoria"
+                name="name"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+                fullWidth
+                size="small"
+                variant="filled"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" color="primary" sx={{ mb: 2 }}>
+                Subcategorias
+              </Typography>
+              {newCategory.subcategories.map((subcat, index) => (
+                <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    label={`Subcategoria ${index + 1}`}
+                    value={subcat}
+                    onChange={(e) => handleSubcategoryChange(index, e.target.value)}
+                    fullWidth
+                    size="small"
+                    variant="filled"
+                  />
+                  <IconButton onClick={() => {
+                    const updatedSubcategories = newCategory.subcategories.filter((_, i) => i !== index);
+                    setNewCategory(prev => ({ ...prev, subcategories: updatedSubcategories }));
+                  }}>
+                    <Delete fontSize="small" color="error"/>
+                  </IconButton>
+                </Box>
+              ))}
+              <Button variant="outlined" startIcon={<Add />} onClick={addSubcategory} size="small">
+                Adicionar Subcategoria
+              </Button>
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider', pt: 3 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Cancel />}
+                  onClick={resetCategoryForm}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<CheckCircle />}
+                  onClick={saveCategory}
+                  sx={{ minWidth: 200 }}
+                >
+                  Salvar Categoria
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    )}
   </CardContent>
 </Card>
               {/* Product Form */}
@@ -527,6 +622,7 @@ const handleSubcategoryChange = (index, value) => {
                   />
                 </Grid>
               ))}
+              
 
               {/* Campo de Categoria Dinâmico */}
               <Grid item xs={12} md={6}>
@@ -604,74 +700,113 @@ const handleSubcategoryChange = (index, value) => {
               </TextField>
             </Grid>
           </Grid>
+                  {/* campo de imagem */}
 
-          <Grid item xs={12}>
-            <Divider sx={{ my: 3 }} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-              <Paid fontSize="small" color="primary" />
-              <Typography variant="subtitle1" color="primary">Preços e Dimensões</Typography>
-            </Box>
-            <Grid container spacing={2}>
-              {["costPrice", "salePrice", "weight"].map((field) => (
-                <Grid item xs={4} key={field}>
-                  <TextField
-                    label={field === 'costPrice' ? 'Preço de Custo' : field === 'salePrice' ? 'Preço de Venda' : 'Peso'}
-                    name={field}
-                    value={newProduct[field]}
-                    onChange={handleInputChange}
-                    fullWidth
-                    type="number"
-                    InputProps={{ startAdornment: field.includes('Price') && 'R$' }}
-                    size="small"
-                  />
-                </Grid>
-              ))}
-              {["length", "width", "height"].map((dim) => (
-                <Grid item xs={4} key={dim}>
-                  <TextField
-                    label={`Dimensão (${dim})`}
-                    name={dim}
-                    value={newProduct.dimensions[dim]}
-                    onChange={e => setNewProduct(prev => ({
-                      ...prev,
-                      dimensions: { ...prev.dimensions, [dim]: e.target.value }
-                    }))}
-                    fullWidth
-                    type="number"
-                    size="small"
-                  />
-                </Grid>
-              ))}
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="subtitle1">Variações</Typography>
-                  <Button variant="outlined" startIcon={<Add />} onClick={addVariation} size="small">
-                    Adicionar Variação
-                  </Button>
-                </Box>
-                {newProduct.variations.map((variation, index) => (
-                  <Paper key={index} elevation={1} className={styles.variationCard}>
-                    <Grid container spacing={2}>
-                      {["size", "color", "model", "stock"].map((field) => (
-                        <Grid item xs={3} key={field}>
-                          <TextField
-                            label={field.charAt(0).toUpperCase() + field.slice(1)}
-                            value={variation[field]}
-                            onChange={e => handleVariationChange(index, field, e.target.value)}
-                            fullWidth
-                            size="small"
-                            type={field === 'stock' ? 'number' : 'text'}
-                          />
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Paper>
-                ))}
-              </Box>
-            </Grid>
+                  <Grid item xs={12}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+    <PhotoCamera fontSize="small" color="primary" />
+    <Typography variant="subtitle1" color="primary">Imagem do Produto</Typography>
+  </Box>
+  <ImageUpload 
+    onImageUpload={(imageUrl) => setNewProduct(prev => ({ ...prev, imageUrl }))}
+  />
+  {newProduct.imageUrl && (
+    <Avatar 
+      src={newProduct.imageUrl} 
+      variant="rounded" 
+      sx={{ width: 100, height: 100, mt: 2 }}
+    />
+  )}
+</Grid>
+<Grid item xs={12}>
+  <Divider sx={{ my: 3 }} />
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+    <Paid fontSize="small" color="primary" />
+    <Typography variant="subtitle1" color="primary">Preços e Dimensões</Typography>
+  </Box>
+  <Grid container spacing={2}>
+    {/* Campos de Preço e Peso */}
+    {["costPrice", "salePrice", "weight"].map((field) => (
+      <Grid item xs={4} key={field}>
+        <TextField
+          label={
+            field === 'costPrice' ? 'Preço de Custo' :
+            field === 'salePrice' ? 'Preço de Venda' :
+            'Peso (kg)'
+          }
+          name={field}
+          value={newProduct[field]}
+          onChange={handleInputChange}
+          fullWidth
+          type="number"
+          InputProps={{ startAdornment: field.includes('Price') && 'R$' }}
+          size="small"
+          inputProps={{ min: 0 }} // Garante que o valor não seja negativo
+        />
+      </Grid>
+    ))}
+
+    {/* Campos de Dimensões */}
+    {["length", "width", "height"].map((dim) => (
+      <Grid item xs={4} key={dim}>
+        <TextField
+          label={
+            dim === 'length' ? 'Comprimento (cm)' :
+            dim === 'width' ? 'Largura (cm)' :
+            'Altura (cm)'
+          }
+          name={dim}
+          value={newProduct.dimensions[dim]}
+          onChange={e => setNewProduct(prev => ({
+            ...prev,
+            dimensions: { ...prev.dimensions, [dim]: e.target.value }
+          }))}
+          fullWidth
+          type="number"
+          size="small"
+          inputProps={{ min: 0 }} // Garante que o valor não seja negativo
+        />
+      </Grid>
+    ))}
+  </Grid>
+
+  {/* Seção de Variações */}
+  <Grid item xs={12}>
+    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="subtitle1">Variações</Typography>
+        <Button variant="outlined" startIcon={<Add />} onClick={addVariation} size="small">
+          Adicionar Variação
+        </Button>
+      </Box>
+      {newProduct.variations.map((variation, index) => (
+        <Paper key={index} elevation={1} className={styles.variationCard}>
+          <Grid container spacing={2}>
+            {/* Campos de Variação */}
+            {["size", "color", "model", "stock"].map((field) => (
+              <Grid item xs={3} key={field}>
+                <TextField
+                  label={
+                    field === 'size' ? 'Tamanho' :
+                    field === 'color' ? 'Cor' :
+                    field === 'model' ? 'Modelo' :
+                    'Estoque'
+                  }
+                  value={variation[field]}
+                  onChange={e => handleVariationChange(index, field, e.target.value)}
+                  fullWidth
+                  size="small"
+                  type={field === 'stock' ? 'number' : 'text'}
+                  inputProps={{ min: 0 }} // Garante que o estoque não seja negativo
+                />
+              </Grid>
+            ))}
           </Grid>
+        </Paper>
+      ))}
+    </Box>
+  </Grid>
+</Grid>
 
           <Grid item xs={12}>
             <Box sx={{
@@ -986,118 +1121,98 @@ const handleSubcategoryChange = (index, value) => {
 
 {activeView === 'orders' && (
   <>
-    {/* Seção de Pedidos */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, gap: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <LocalShipping sx={{ 
-          fontSize: 40, 
-          color: theme.palette.primary.main,
-          bgcolor: theme.palette.primary.light,
-          p: 1.5,
-          borderRadius: 4
-        }}/>
-        <Typography variant="h4" fontWeight="700">Gestão de Pedidos</Typography>
-      </Box>
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4, gap: 2 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <LocalShipping sx={{ fontSize: 40, color: "primary.main", bgcolor: "primary.light", p: 1.5, borderRadius: 4 }} />
+      <Typography variant="h4" fontWeight="700">Gestão de Pedidos</Typography>
     </Box>
+  </Box>
 
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
-        }}>
-          <Typography variant="h6" fontWeight="600">
-            Pedidos Pendentes ({sales.filter(s => !s.shipped).length})
-          </Typography>
-          <Chip 
-            label="Atualizado agora" 
-            size="small" 
-            color="success" 
-            variant="outlined"
-            icon={<CheckCircle fontSize="small"/>}
-          />
-        </Box>
-        
-        <Grid container spacing={2}>
-          {sales.filter(s => !s.shipped).map(sale => {
-            // Dados do cliente
-            const userDetails = sale.user?.details || {}; // Subcoleção `details` dentro de `user`
-            const userAddress = sale.user?.details.address || {}; // Subcoleção `address` dentro de `user`
+  <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+    <TextField
+      label="Buscar pedido"
+      variant="outlined"
+      fullWidth
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+    <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
+      <MenuItem value="all">Todos</MenuItem>
+      <MenuItem value="pending">Pendentes</MenuItem>
+      <MenuItem value="shipped">Enviados</MenuItem>
+    </Select>
+  </Box>
 
-            return (
-              <Grid item xs={12} key={sale.id}>
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center'
-                  }}>
-                    <Box>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        #{sale.id.slice(0,8).toUpperCase()} • {sale.date?.toLocaleDateString('pt-BR')}
-                      </Typography>
-                      <Typography variant="body1" fontWeight="500">
-                        {userDetails.fullName || "Cliente não identificado"}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {sale.items.length} itens • R$ {sale.total.toFixed(2)}
-                      </Typography>
-                    </Box>
-                    
-                    <Button
-                      variant="contained"
-                      startIcon={<LocalShipping />}
-                      onClick={() => markAsShipped(sale.id)}
-                      sx={{ borderRadius: 3 }}
-                    >
-                      Marcar como Enviado
-                    </Button>
-                  </Box>
-                  {/* Detalhes do Pedido */}
-                  <Accordion>
-                    <AccordionSummary expandIcon={<ExpandMore />}>
-                      <Typography variant="subtitle2">Detalhes do Pedido</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                          <Typography variant="h6" sx={{ mb: 2 }}>Informações do Cliente</Typography>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <Typography variant="body1"><strong>Nome:</strong> {userDetails.fullName || "N/A"}</Typography>
-                            <Typography variant="body1"><strong>CPF:</strong> {userDetails.cpf || "N/A"}</Typography>
-                            <Typography variant="body1"><strong>Telefone:</strong> {userDetails.phone || "N/A"}</Typography>
-                            <Typography variant="body1"><strong>Endereço:</strong> {userAddress.street ? `${userAddress.street}, ${userAddress.number} - ${userAddress.neighborhood}, ${userAddress.city} - ${userAddress.state}` : "N/A"}</Typography>
-                            <Typography variant="body1"><strong>CEP:</strong> {userAddress.zipCode || "N/A"}</Typography>
+  <Card sx={{ mb: 4 }}>
+    <CardContent>
+      <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>Pedidos ({filteredSales.length})</Typography>
+      <Grid container spacing={2}>
+        {filteredSales.map(sale => (
+          <Grid item xs={12} key={sale.id}>
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Box>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    #{sale.id.slice(0, 8).toUpperCase()} • {sale.date?.toLocaleDateString("pt-BR")} ({Math.round((new Date() - sale.date) / (1000 * 60 * 60 * 24))} dias atrás)
+                  </Typography>
+                  <Typography variant="body1" fontWeight="500">
+                    {sale.user?.details.fullName || "Cliente não identificado"}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {sale.items.length} itens • R$ {sale.total.toFixed(2)}
+                  </Typography>
+                </Box>
+                <Chip label={sale.shipped ? "Enviado" : "Pendente"} color={sale.shipped ? "success" : "warning"} variant="outlined" />
+                <Button variant="contained" startIcon={<LocalShipping />} onClick={() => markAsShipped(sale.id)} sx={{ borderRadius: 3 }}>
+                  Marcar como Enviado
+                </Button>
+              </Box>
+              
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle2">Detalhes do Pedido</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Typography variant="h6" sx={{ mb: 2 }}>Informações do Cliente</Typography>
+                      <Typography variant="body1"><strong>Nome:</strong> {sale.user?.details.fullName || "N/A"}</Typography>
+                      <Typography variant="body1"><strong>CPF:</strong> {sale.user?.details.cpf || "N/A"}</Typography>
+                      <Typography variant="body1"><strong>Telefone:</strong> {sale.user?.details.phone || "N/A"}</Typography>
+                      <Typography variant="body1"><strong>Endereço:</strong> {sale.user?.details.address.street || "N/A"}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="h6" sx={{ mb: 2 }}>Itens do Pedido</Typography>
+                      {sale.items.map((item, index) => (
+                        <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                          <Avatar src={item.imageUrl} variant="rounded" />
+                          <Box>
+                            <Typography variant="body1">{item.name}</Typography>
+                            <Typography variant="body2" color="textSecondary">Quantidade: {item.quantity} • Preço: R$ {item.price.toFixed(2)}</Typography>
                           </Box>
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Typography variant="h6" sx={{ mb: 2 }}>Itens do Pedido</Typography>
-                          {sale.items.map((item, index) => (
-                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                              <Avatar src={item.imageUrl} variant="rounded" />
-                              <Box>
-                                <Typography variant="body1">{item.name}</Typography>
-                                <Typography variant="body2" color="textSecondary">
-                                  Quantidade: {item.quantity} • Preço: R$ {item.price.toFixed(2)}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          ))}
-                        </Grid>
-                      </Grid>
-                    </AccordionDetails>
-                  </Accordion>
-                </Paper>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </CardContent>
-    </Card>
-    <ShippedOrders/>
-  </>
+                        </Box>
+                      ))}
+                    </Grid>
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+              <TextField
+                label="Notas Internas"
+                multiline
+                rows={2}
+                fullWidth
+                value={notes[sale.id] || ""}
+                onChange={(e) => handleNoteChange(sale.id, e.target.value)}
+                sx={{ mt: 2 }}
+              />
+              <Button startIcon={<Print />} sx={{ mt: 1 }}>Imprimir</Button>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </CardContent>
+  </Card>
+</>
 )}
         </Box>
         {activeView === 'reports' && (

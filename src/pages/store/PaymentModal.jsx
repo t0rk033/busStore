@@ -63,34 +63,35 @@ const PaymentModal = ({ open, onClose, total, user, userData, onSuccess, showToa
   };
 
   return (
-    <div className={`${styles.paymentModal} ${open ? styles.open : ''}`}>
-      <div className={styles.paymentContent}>
-        <button 
-          className={styles.closeButton} 
-          onClick={onClose}
-          aria-label="Fechar modal de pagamento"
-        >
-          &times;
-        </button>
-        
-        <h2>Pagamento Seguro</h2>
-        
-        <div className={styles.paymentInfo}>
-          <div className={styles.paymentTotal}>
-            Total: {new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL'
-            }).format(total)}
+    <div className={styles.paymentForm}>
+      <div className={`${styles.paymentModal} ${open ? styles.open : ''}`}>
+        <div className={styles.paymentContent}>
+          <button
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Fechar modal de pagamento"
+          >
+            &times;
+          </button>
+      
+          <h2>Pagamento Seguro</h2>
+      
+          <div className={styles.paymentInfo}>
+            <div className={styles.paymentTotal}>
+              Total: {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              }).format(total)}
+            </div>
+            <div id="payment-form" className={styles.paymentForm} />
           </div>
-          <div id="payment-form" className={styles.paymentForm} />
+          {processing && (
+            <div className={styles.processingOverlay}>
+              <div className={styles.spinner} />
+              <p>Processando seu pagamento...</p>
+            </div>
+          )}
         </div>
-
-        {processing && (
-          <div className={styles.processingOverlay}>
-            <div className={styles.spinner} />
-            <p>Processando seu pagamento...</p>
-          </div>
-        )}
       </div>
     </div>
   );
