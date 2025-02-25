@@ -20,59 +20,19 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
 
-  // Carrega dados do usuário e histórico de pedidos
+  // Carrega dados do usuário
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchUserData = async () => {
       if (user) {
         try {
-          // Carrega dados do usuário
           const userDoc = doc(db, 'users', user.uid);
           const userSnapshot = await getDoc(userDoc);
 
           if (userSnapshot.exists()) {
             setUserData(userSnapshot.data());
-
-            // Carrega histórico de pedidos
-            const salesQuery = query(
-              collection(db, 'sales'),
-              where('userId', '==', user.uid)
-            );
-
-            const salesSnapshot = await getDocs(salesQuery);
-            const salesData = await Promise.all(
-              salesSnapshot.docs.map(async (saleDoc) => {
-                const saleData = saleDoc.data();
-
-                // Busca dados do cliente
-                const clientSnapshot = await getDocs(
-                  collection(db, 'sales', saleDoc.id, 'client')
-                );
-                const clientData = clientSnapshot.docs[0]?.data() || {};
-
-                // Busca dados do endereço
-                let addressData = {};
-                if (clientSnapshot.docs[0]) {
-                  const addressSnapshot = await getDocs(
-                    collection(db, 'sales', saleDoc.id, 'client', clientSnapshot.docs[0].id, 'address')
-                  );
-                  addressData = addressSnapshot.docs[0]?.data() || {};
-                }
-
-                return {
-                  id: saleDoc.id,
-                  ...saleData,
-                  date: saleData.date?.toDate().toLocaleDateString('pt-BR'),
-                  status: saleData.shipped ? 'Enviado' : 'Processando',
-                  client: clientData,
-                  address: addressData
-                };
-              })
-            );
-
-            setSalesHistory(salesData);
           }
         } catch (error) {
-          console.error('Erro ao carregar dados:', error);
+          console.error('Erro ao carregar dados do usuário:', error);
           setMessage('Erro ao carregar dados do usuário');
         } finally {
           setLoading(false);
@@ -80,7 +40,65 @@ function Profile() {
       }
     };
 
-    fetchData();
+    fetchUserData();
+  }, [user]);
+
+  // Carrega histórico de pedidos
+  useEffect(() => {
+    const fetchSalesHistory = async () => {
+      if (user) {
+        try {
+          // Busca todos os documentos da coleção 'sales'
+          const salesQuery = collection(db, 'sales');
+          const salesSnapshot = await getDocs(salesQuery);
+  
+          const orders = [];
+  
+          // Itera sobre cada venda
+          for (const saleDoc of salesSnapshot.docs) {
+            // Busca a subcoleção 'user' para verificar se o pedido pertence ao usuário logado
+            const userSubcollection = collection(db, 'sales', saleDoc.id, 'user');
+            const userSnapshot = await getDocs(userSubcollection);
+  
+            // Verifica se algum documento na subcoleção 'user' contém o UID do usuário logado
+            const userDoc = userSnapshot.docs.find((doc) => doc.data().uid === user.uid);
+  
+            if (userDoc) {
+              console.log('Pedido pertence ao usuário:', saleDoc.id);
+  
+              // Busca os itens da subcoleção 'items'
+              const itemsSubcollection = collection(db, 'sales', saleDoc.id, 'items');
+              const itemsSnapshot = await getDocs(itemsSubcollection);
+              const items = itemsSnapshot.docs.map((doc) => doc.data());
+  
+              // Busca os dados de pagamento da subcoleção 'payment'
+              const paymentSubcollection = collection(db, 'sales', saleDoc.id, 'payment');
+              const paymentSnapshot = await getDocs(paymentSubcollection);
+              const payment = paymentSnapshot.docs[0]?.data();
+  
+              // Adiciona o pedido ao histórico
+              orders.push({
+                id: saleDoc.id,
+                date: saleDoc.data().date?.toDate().toLocaleDateString('pt-BR'),
+                total: saleDoc.data().total,
+                status: saleDoc.data().shipped ? 'Enviado' : 'Processando',
+                items: items,
+                payment: payment,
+                user: userDoc.data() // Dados do usuário
+              });
+            }
+          }
+  
+          // Ordena os pedidos por data (do mais recente para o mais antigo)
+          setSalesHistory(orders.sort((a, b) => new Date(b.date) - new Date(a.date)));
+        } catch (error) {
+          console.error('Erro ao carregar histórico:', error);
+          setMessage('Erro ao carregar histórico de pedidos');
+        }
+      }
+    };
+  
+    fetchSalesHistory();
   }, [user]);
 
   // Função para salvar alterações no perfil
@@ -260,39 +278,38 @@ function Profile() {
                 {salesHistory.map((order) => (
                   <div key={order.id} className={styles.orderCard}>
                     <div className={styles.orderHeader}>
-                      <div className={styles.orderInfo}>
-                        <FaCalendarAlt />
-                        <span>{order.date}</span>
+                      <div className={styles.orderMeta}>
+                        <span className={styles.orderId}>Pedido #{order.id.slice(0, 8)}</span>
+                        <span className={styles.orderDate}>
+                          <FaCalendarAlt /> {order.date}
+                        </span>
                       </div>
                       <div className={`${styles.status} ${order.status === 'Enviado' ? styles.shipped : styles.processing}`}>
                         {order.status}
                       </div>
                     </div>
 
-                    <div className={styles.orderDetails}>
-                      <div className={styles.detailSection}>
-                        <h4>
-                          <FaBox /> Itens
-                        </h4>
+                    <div className={styles.orderBody}>
+                      <div className={styles.orderSection}>
+                        <h4><FaBox /> Produtos</h4>
                         {order.items.map((item, index) => (
                           <div key={index} className={styles.orderItem}>
-                            <span>{item.name}</span>
-                            <div className={styles.itemDetails}>
-                              <span>{item.quantity}x</span>
-                              <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                            <div className={styles.itemInfo}>
+                              <span className={styles.itemName}>{item.name}</span>
+                              <span className={styles.itemQuantity}>x{item.quantity}</span>
                             </div>
+                            <span className={styles.itemPrice}>
+                              R$ {(item.price * item.quantity).toFixed(2)}
+                            </span>
                           </div>
                         ))}
                       </div>
 
-                      <div className={styles.detailSection}>
-                        <h4>
-                          <FaMapMarkerAlt /> Endereço
-                        </h4>
+                      <div className={styles.orderSection}>
+                        <h4><FaMoneyBillWave /> Pagamento</h4>
                         <p>
-                          {order.address.street}, {order.address.number}<br />
-                          {order.address.neighborhood}<br />
-                          {order.address.city} - {order.address.state}
+                          Método: {order.payment?.method || 'Não informado'}<br />
+                          Status: {order.payment?.status || 'Não informado'}
                         </p>
                       </div>
 

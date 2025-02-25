@@ -46,14 +46,14 @@ function NavBar() {
           <ul className={`${styles.navLinks} ${isMenuOpen ? styles.open : ''}`}>
             <Link to='/'>Inicio</Link>
             <Link to="/loja">Loja</Link>
-            <Link to='/reservas'>Reservas</Link>
+            {/* <Link to='/reservas'>Reservas</Link> */}
             <div className={styles.account}>
               {userLoggedIn ? (
                 <Link to='/perfil' className={styles.logoutButton}>
                   Conta
                 </Link>
               ) : (
-                <Link to="/registro">Entrar</Link>
+                <Link to="/login">Entrar</Link>
               )}
             </div>
           </ul>

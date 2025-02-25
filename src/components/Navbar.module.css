@@ -96,6 +96,9 @@
 .navbarmain.scrolled .logoutButton:hover {
   text-decoration: underline;
 }
+.menuIcon{
+  display: none;
+}
 
 /* Media Queries para dispositivos móveis */
 @media (max-width: 768px) {

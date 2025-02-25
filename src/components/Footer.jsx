@@ -32,8 +32,8 @@ function Footer() {
       <div className={styles.footerSection}>
         <h4>Contato</h4>
         <p>Email: contato@busstore.com</p>
-        <p>Telefone: +55 31 1234-5678</p>
-        <p>Endereço: Rua do Futuro, 123, Monte Santo de Minas, MG</p>
+        {/* <p>Telefone: +55 31 1234-5678</p> */}
+        {/* <p>Endereço: Rua do Futuro, 123, Monte Santo de Minas, MG</p> */}
       </div>
     </div>
     <div className={styles.footerBottom}>

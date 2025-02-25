@@ -77,32 +77,73 @@
     font-weight: 700;
   }
   
-  .cartItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding: 10px;
-    background-color: var(--white);
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .cartItemName {
-    font-size: 1.2rem;
-    color: var(--text-color);
-  }
-  
-  .cartItemPrice {
-    font-size: 1rem;
-    color: var(--text-color);
-  }
-  
-  .quantityControls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  /* Estilo do item do carrinho */
+.cartItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Detalhes do item (nome, cor, tamanho) */
+.cartItemDetails {
+  flex: 1;
+  margin-right: 20px;
+}
+
+.cartItemName {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.cartItemVariation {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Controles de quantidade */
+.quantityControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quantityButton {
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.quantityButton:hover {
+  background-color: #e0e0e0;
+}
+
+.cartItemQuantity {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Botão de remover */
+.removeButton {
+  padding: 5px 10px;
+  border: 1px solid #ff4d4d;
+  border-radius: 5px;
+  background-color: #ff4d4d;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.removeButton:hover {
+  background-color: #ff1a1a;
+}
   
   /* Ícone do Carrinho Flutuante */
   .cartIcon {

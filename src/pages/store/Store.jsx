@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom'; // Importe o useNavigate
 import styles from './store.module.css';
 import { useCart } from 'react-use-cart';
 import { db } from '../../firebase';
@@ -6,6 +7,7 @@ import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, r
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
 import Footer from '../../components/Footer';
+import ProductModal from './ProductModal';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -24,6 +26,8 @@ function Store() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+
+  const navigate = useNavigate(); // Hook para redirecionamento
 
   const showToast = useCallback((message, type = 'info') => {
     setToast({ show: true, message, type });
@@ -93,7 +97,7 @@ function Store() {
   const checkStock = useCallback(async () => {
     try {
       await Promise.all(items.map(async (item) => {
-        const productRef = doc(db, "products", item.id);
+        const productRef = doc(db, "products", item.id.split('-')[0]); // Extrai o ID original do produto
         const productDoc = await getDoc(productRef);
         
         if (!productDoc.exists()) {
@@ -101,10 +105,12 @@ function Store() {
         }
         
         const productData = productDoc.data();
-        const stock = productData.variations?.[0]?.stock ?? productData.stock;
+        const selectedVariation = productData.variations.find(
+          (v) => v.color === item.variation.color && v.size === item.variation.size
+        );
         
-        if (stock < item.quantity) {
-          throw new Error(`Estoque insuficiente para ${item.name}`);
+        if (!selectedVariation || selectedVariation.stock < item.quantity) {
+          throw new Error(`Estoque insuficiente para ${item.name} (${item.variation.color}, ${item.variation.size})`);
         }
       }));
       return true;
@@ -120,19 +126,27 @@ function Store() {
     try {
       // Atualização transacional do estoque
       await Promise.all(items.map(async (item) => {
-        const productRef = doc(db, "products", item.id);
+        const productRef = doc(db, "products", item.id.split('-')[0]); // Extrai o ID original do produto
         
         await runTransaction(db, async (transaction) => {
           const productDoc = await transaction.get(productRef);
           if (!productDoc.exists()) throw new Error('Produto não encontrado');
 
-          const newStock = (productDoc.data().variations?.[0]?.stock ?? productDoc.data().stock) - item.quantity;
-          if (newStock < 0) throw new Error('Estoque insuficiente');
+          const selectedVariation = productDoc.data().variations.find(
+            (v) => v.color === item.variation.color && v.size === item.variation.size
+          );
 
+          if (!selectedVariation || selectedVariation.stock < item.quantity) {
+            throw new Error('Estoque insuficiente');
+          }
+
+          const newStock = selectedVariation.stock - item.quantity;
           transaction.update(productRef, {
-            variations: productDoc.data().variations ? 
-              [{ ...productDoc.data().variations[0], stock: newStock }] : 
-              { ...productDoc.data(), stock: newStock }
+            variations: productDoc.data().variations.map((v) =>
+              v.color === item.variation.color && v.size === item.variation.size
+                ? { ...v, stock: newStock }
+                : v
+            ),
           });
         });
       }));
@@ -145,6 +159,7 @@ function Store() {
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          variation: item.variation,
         })),
         date: serverTimestamp(),
         payment: {
@@ -245,6 +260,28 @@ function Store() {
     );
   };
 
+  const handleAddToCart = (productWithDetails) => {
+    addItem({
+      ...productWithDetails,
+      id: `${productWithDetails.id}-${productWithDetails.variation.color}-${productWithDetails.variation.size}`, // ID único para cada variação
+    });
+    showToast('Produto adicionado ao carrinho!', 'success');
+  };
+
+  // Função para verificar se o usuário está logado antes de finalizar a compra
+  const handleCheckout = async () => {
+    if (!user) {
+      showToast('Você precisa estar logado para finalizar a compra.', 'error');
+      navigate('/login'); // Redireciona para a tela de login
+      return;
+    }
+
+    if (await checkStock()) {
+      setOpenCartModal(false);
+      setOpenPaymentModal(true);
+    }
+  };
+
   return (
     <div>
       <NavBar />
@@ -316,8 +353,8 @@ function Store() {
               <button
                 className={styles.addToCartButton}
                 onClick={() => {
-                  addItem({ ...product, id: product.id, price: product.salePrice });
-                  showToast('Produto adicionado ao carrinho!', 'success');
+                  setSelectedProduct(product);
+                  setOpenProductModal(true);
                 }}
               >
                 Adicionar ao Carrinho
@@ -340,7 +377,15 @@ function Store() {
             ) : (
               items.map(item => (
                 <div key={item.id} className={styles.cartItem}>
-                  <div className={styles.cartItemName}>{item.name} - R$ {item.price.toFixed(2)}</div>
+                  <div className={styles.cartItemDetails}>
+                    <div className={styles.cartItemName}>
+                      {item.name} - R$ {item.price.toFixed(2)}
+                    </div>
+                    <div className={styles.cartItemVariation}>
+                      <span>Cor: {item.variation.color}</span>
+                      <span>Tamanho: {item.variation.size}</span>
+                    </div>
+                  </div>
                   <div className={styles.quantityControls}>
                     <button
                       className={styles.quantityButton}
@@ -372,12 +417,7 @@ function Store() {
               </div>
               <button
                 className={styles.checkoutButton}
-                onClick={async () => {
-                  if (await checkStock()) {
-                    setOpenCartModal(false);
-                    setOpenPaymentModal(true);
-                  }
-                }}
+                onClick={handleCheckout}
                 disabled={items.length === 0}
               >
                 Finalizar Compra
@@ -391,7 +431,16 @@ function Store() {
 
         {/* Modal de Pagamento */}
         <PaymentModal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)} total={cartTotal} />
+
+        {/* Modal do Produto */}
+        <ProductModal
+          open={openProductModal}
+          onClose={() => setOpenProductModal(false)}
+          product={selectedProduct}
+          addToCart={handleAddToCart}
+        />
       </div>
+
       <Footer />
     </div>
   );
