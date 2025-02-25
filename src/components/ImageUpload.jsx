@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@mui/material';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
-import { cloudinaryConfig } from '../clodinaryConfig'
+import { cloudinaryConfig } from '../clodinaryConfig'; // Certifique-se de que o caminho está correto
 
 const ImageUpload = ({ onImageUpload }) => {
   const openCloudinaryWidget = () => {
@@ -10,11 +10,8 @@ const ImageUpload = ({ onImageUpload }) => {
         cloudName: cloudinaryConfig.cloudName,
         uploadPreset: cloudinaryConfig.uploadPreset,
         sources: ['local', 'url', 'camera'], // Fontes de upload
-        multiple: false, // Apenas um arquivo por vez
-        cropping: true, // Permite cortar a imagem
-        croppingAspectRatio: 1, // Proporção 1:1 (quadrado)
-        croppingShowBackButton: true,
-        croppingCoordinatesMode: 'custom',
+        multiple: true, // Permite upload de várias imagens
+        cropping: false, // Desabilita o corte para múltiplas imagens
         maxFileSize: 1500000, // 1.5MB
         maxImageWidth: 2000,
         maxImageHeight: 2000,
@@ -46,8 +43,11 @@ const ImageUpload = ({ onImageUpload }) => {
       },
       (error, result) => {
         if (!error && result && result.event === 'success') {
-          // Retorna a URL da imagem para o componente pai
+          // Passa a URL da imagem para o componente pai
           onImageUpload(result.info.secure_url);
+        } else if (result && result.event === 'close') {
+          // Quando o widget é fechado, você pode adicionar lógica adicional aqui
+          console.log('Widget fechado');
         }
       }
     );
@@ -59,7 +59,7 @@ const ImageUpload = ({ onImageUpload }) => {
       startIcon={<PhotoCamera />}
       onClick={openCloudinaryWidget}
     >
-      Upload de Imagem
+      Adicionar Fotos
     </Button>
   );
 };

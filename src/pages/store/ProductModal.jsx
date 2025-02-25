@@ -15,13 +15,18 @@ import {
   MenuItem,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 const style = {
   position: 'absolute',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800, // Aumentei a largura para acomodar o layout de duas colunas
+  width: 800,
   maxWidth: '90%',
   bgcolor: 'background.paper',
   boxShadow: 24,
@@ -33,13 +38,10 @@ const style = {
 function ProductModal({ open, onClose, product, addToCart }) {
   if (!product) return null;
 
-  // Estado para controlar a cor selecionada
   const [selectedColor, setSelectedColor] = useState(product.variations?.[0]?.color || null);
-  // Estado para controlar o tamanho selecionado
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
 
-  // Função para adicionar o produto ao carrinho
   const handleAddToCart = () => {
     const selectedVariation = product.variations.find(
       (v) => v.color === selectedColor && v.size === selectedSize
@@ -47,28 +49,25 @@ function ProductModal({ open, onClose, product, addToCart }) {
 
     if (selectedVariation) {
       const productWithDetails = {
-        ...product, // Copia todas as propriedades do produto
-        price: product.salePrice, // Mapeia salePrice para price
-        variation: selectedVariation, // Inclui a variação selecionada
-        quantity: quantity, // Inclui a quantidade selecionada
+        ...product,
+        price: product.salePrice,
+        variation: selectedVariation,
+        quantity: quantity,
       };
-      addToCart(productWithDetails); // Adiciona o produto ao carrinho
-      onClose(); // Fecha o modal
+      addToCart(productWithDetails);
+      onClose();
     }
   };
 
-  // Filtra as variações disponíveis para a cor selecionada
   const availableSizes = product.variations
     .filter((v) => v.color === selectedColor)
     .map((v) => v.size);
 
-  // Extrai as cores únicas disponíveis
   const availableColors = [...new Set(product.variations.map((v) => v.color))];
 
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={style}>
-        {/* Cabeçalho do modal com botão de fechar */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5" fontWeight="bold">
             {product.name}
@@ -80,34 +79,46 @@ function ProductModal({ open, onClose, product, addToCart }) {
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Layout em duas colunas */}
         <Grid container spacing={4}>
-          {/* Coluna da imagem */}
+          {/* Carrossel de Imagens */}
           <Grid item xs={12} md={6}>
-            <img
-              src={product.imageUrl}
-              alt={product.name}
+            <Swiper
+              modules={[Navigation, Pagination]}
+              spaceBetween={10}
+              slidesPerView={1}
+              navigation
+              pagination={{ clickable: true }}
               style={{
                 width: '100%',
-                height: 'auto',
                 borderRadius: '8px',
               }}
-            />
+            >
+              {product.imageUrls.map((imageUrl, index) => (
+                <SwiperSlide key={index}>
+                  <img
+                    src={imageUrl}
+                    alt={`${product.name} - Imagem ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </Grid>
 
-          {/* Coluna dos detalhes */}
+          {/* Detalhes do Produto */}
           <Grid item xs={12} md={6}>
-            {/* Descrição do produto */}
             <Typography variant="body1" color="text.secondary" gutterBottom>
               {product.description}
             </Typography>
 
-            {/* Preço do produto */}
             <Typography variant="h4" fontWeight="bold" gutterBottom>
               R$ {product.salePrice.toFixed(2)}
             </Typography>
 
-            {/* Seleção de cor */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Cor:
@@ -129,7 +140,6 @@ function ProductModal({ open, onClose, product, addToCart }) {
               </Stack>
             </Box>
 
-            {/* Seleção de tamanho */}
             {selectedColor && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
@@ -153,7 +163,6 @@ function ProductModal({ open, onClose, product, addToCart }) {
               </Box>
             )}
 
-            {/* Controle de quantidade */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Quantidade:
@@ -173,7 +182,6 @@ function ProductModal({ open, onClose, product, addToCart }) {
               </FormControl>
             </Box>
 
-            {/* Botão de adicionar ao carrinho */}
             <Button
               variant="contained"
               color="primary"

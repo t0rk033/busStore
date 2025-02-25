@@ -36,7 +36,7 @@ function StockManagement() {
     barcode: "",
     name: "",
     description: "",
-    imageUrl: "",
+    imageUrls: [],
     category: "",
     subcategory: "",
     variations: [{ size: "", color: "", model: "", stock: 0 }],
@@ -233,37 +233,51 @@ const handleSubcategoryChange = (index, value) => {
   const saveProduct = async () => {
     try {
       const productData = {
-        ...newProduct,
+        sku: newProduct.sku,
+        barcode: newProduct.barcode,
+        name: newProduct.name,
+        description: newProduct.description,
+        imageUrls: newProduct.imageUrls, // Lista de URLs
+        category: newProduct.category,
+        subcategory: newProduct.subcategory,
+        variations: newProduct.variations.map((v) => ({
+          size: v.size,
+          color: v.color,
+          model: v.model,
+          stock: parseInt(v.stock, 10) || 0, // Garante que o estoque seja um número
+        })),
         costPrice: parseFloat(newProduct.costPrice) || 0,
         salePrice: parseFloat(newProduct.salePrice) || 0,
         weight: parseFloat(newProduct.weight) || 0,
-        variations: newProduct.variations.map(v => ({
-          ...v,
-          stock: parseInt(v.stock, 10) || 0
-        })),
         dimensions: {
           length: parseFloat(newProduct.dimensions.length) || 0,
           width: parseFloat(newProduct.dimensions.width) || 0,
-          height: parseFloat(newProduct.dimensions.height) || 0
-        }
+          height: parseFloat(newProduct.dimensions.height) || 0,
+        },
+        minStock: parseInt(newProduct.minStock, 10) || 1,
+        location: newProduct.location,
+        reservedStock: parseInt(newProduct.reservedStock, 10) || 0,
       };
-
+  
       if (editingProduct) {
+        // Atualiza o produto existente
         await updateDoc(doc(db, "products", editingProduct.id), productData);
-        setProducts(prev => 
-          prev.map(p => p.id === editingProduct.id ? { ...productData, id: editingProduct.id } : p)
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editingProduct.id ? { ...productData, id: editingProduct.id } : p
+          )
         );
       } else {
+        // Adiciona um novo produto
         const docRef = await addDoc(collection(db, "products"), productData);
-        setProducts(prev => [...prev, { ...productData, id: docRef.id }]);
+        setProducts((prev) => [...prev, { ...productData, id: docRef.id }]);
       }
-
-      resetForm();
+  
+      resetForm(); // Limpa o formulário
     } catch (error) {
       console.error("Error saving product:", error);
     }
   };
-
   const deleteProduct = async (id) => {
     try {
       await deleteDoc(doc(db, "products", id));
@@ -343,7 +357,7 @@ const handleSubcategoryChange = (index, value) => {
   // =================== Helper Functions ===================
   const resetForm = () => {
     setNewProduct({
-      sku: "", barcode: "", name: "", description: "", imageUrl: "",
+      sku: "", barcode: "", name: "", description: "", imageUrl: [],
       category: "", subcategory: "", variations: [{ size: "", color: "", model: "", stock: 0 }],
       costPrice: "", salePrice: "", weight: "", dimensions: { length: "", width: "", height: "" },
       minStock: 0, location: "", reservedStock: 0, supplierId: ""
@@ -703,20 +717,27 @@ const handleSubcategoryChange = (index, value) => {
                   {/* campo de imagem */}
 
                   <Grid item xs={12}>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
     <PhotoCamera fontSize="small" color="primary" />
-    <Typography variant="subtitle1" color="primary">Imagem do Produto</Typography>
+    <Typography variant="subtitle1" color="primary">
+      Fotos do Produto
+    </Typography>
   </Box>
-  <ImageUpload 
-    onImageUpload={(imageUrl) => setNewProduct(prev => ({ ...prev, imageUrl }))}
-  />
-  {newProduct.imageUrl && (
-    <Avatar 
-      src={newProduct.imageUrl} 
-      variant="rounded" 
-      sx={{ width: 100, height: 100, mt: 2 }}
-    />
-  )}
+  <ImageUpload
+  onImageUpload={(imageUrl) =>
+    setNewProduct((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, imageUrl] }))
+  }
+/>
+  <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+    {newProduct.imageUrls.map((imageUrl, index) => (
+      <Avatar
+        key={index}
+        src={imageUrl}
+        variant="rounded"
+        sx={{ width: 100, height: 100 }}
+      />
+    ))}
+  </Box>
 </Grid>
 <Grid item xs={12}>
   <Divider sx={{ my: 3 }} />
