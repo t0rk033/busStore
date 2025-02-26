@@ -342,7 +342,7 @@ function Store() {
           {filteredProducts.map(product => (
             <div key={product.id} className={styles.productCard}>
               <img
-                src={product.imageUrl}
+                src={product.imageUrls[0]}
                 alt={product.name}
                 className={styles.productImage}
                 onClick={() => { setSelectedProduct(product); setOpenProductModal(true); }}
