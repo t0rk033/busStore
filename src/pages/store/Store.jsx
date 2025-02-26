@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // Importe o useNavigate
+import { useNavigate } from 'react-router-dom';
 import styles from './store.module.css';
 import { useCart } from 'react-use-cart';
 import { db } from '../../firebase';
@@ -26,8 +26,11 @@ function Store() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  const [cep, setCep] = useState('');
+  const [shippingOptions, setShippingOptions] = useState([]);
+  const [shippingCost, setShippingCost] = useState(0);
 
-  const navigate = useNavigate(); // Hook para redirecionamento
+  const navigate = useNavigate();
 
   const showToast = useCallback((message, type = 'info') => {
     setToast({ show: true, message, type });
@@ -60,7 +63,7 @@ function Store() {
           variations: doc.data().variations || []
         }));
         setProducts(productsData);
-        setFilteredProducts(productsData); // Inicialmente, todos os produtos são exibidos
+        setFilteredProducts(productsData);
 
         // Extrai categorias únicas dos produtos
         const uniqueCategories = [...new Set(productsData.map(product => product.category))];
@@ -97,7 +100,7 @@ function Store() {
   const checkStock = useCallback(async () => {
     try {
       await Promise.all(items.map(async (item) => {
-        const productRef = doc(db, "products", item.id.split('-')[0]); // Extrai o ID original do produto
+        const productRef = doc(db, "products", item.id.split('-')[0]);
         const productDoc = await getDoc(productRef);
         
         if (!productDoc.exists()) {
@@ -126,7 +129,7 @@ function Store() {
     try {
       // Atualização transacional do estoque
       await Promise.all(items.map(async (item) => {
-        const productRef = doc(db, "products", item.id.split('-')[0]); // Extrai o ID original do produto
+        const productRef = doc(db, "products", item.id.split('-')[0]);
         
         await runTransaction(db, async (transaction) => {
           const productDoc = await transaction.get(productRef);
@@ -153,7 +156,7 @@ function Store() {
 
       // Registro da venda
       const saleData = {
-        total: cartTotal,
+        total: cartTotal + shippingCost,
         items: items.map(item => ({
           id: item.id,
           name: item.name,
@@ -179,7 +182,7 @@ function Store() {
       await addDoc(collection(db, "users", user.uid, "orders"), {
         saleId: saleRef.id,
         date: serverTimestamp(),
-        total: cartTotal
+        total: cartTotal + shippingCost
       });
 
       showToast('Compra realizada com sucesso!', 'success');
@@ -191,7 +194,70 @@ function Store() {
     } finally {
       setLoading(false);
     }
-  }, [cartTotal, items, user, userData, emptyCart, showToast]);
+  }, [cartTotal, items, user, userData, emptyCart, showToast, shippingCost]);
+
+  // Função para calcular o frete
+  const calculateShipping = async (cep, products) => {
+    const format = 'json';
+    const service = '04014'; // Código do serviço dos Correios (ex: 04014 é o código para SEDEX)
+    const originCep = '36047040'; // CEP de origem (substitua pelo CEP da sua loja)
+
+    // Calcular peso total e dimensões do pacote
+    const totalWeight = products.reduce((acc, product) => acc + (product.weight || 1) * product.quantity, 0);
+    const packageDimensions = calculatePackageDimensions(products); // Função para calcular dimensões do pacote
+
+    const params = new URLSearchParams({
+      nCdServico: service,
+      sCepOrigem: originCep,
+      sCepDestino: cep,
+      nVlPeso: totalWeight,
+      nVlComprimento: packageDimensions.length,
+      nVlAltura: packageDimensions.height,
+      nVlLargura: packageDimensions.width,
+      nCdFormato: '1', // Formato da encomenda (1 para caixa/pacote)
+      nVlDiametro: '0',
+      sCdMaoPropria: 'N',
+      nVlValorDeclarado: '0',
+      sCdAvisoRecebimento: 'N',
+      StrRetorno: format,
+    });
+
+    try {
+      const response = await fetch(`https://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?${params.toString()}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erro ao calcular frete:', error);
+      return null;
+    }
+  };
+
+  // Função para calcular as dimensões do pacote
+  const calculatePackageDimensions = (products) => {
+    // Exemplo simples: soma das dimensões dos produtos
+    const dimensions = products.reduce((acc, product) => {
+      return {
+        length: acc.length + (product.length || 10),
+        height: acc.height + (product.height || 10),
+        width: acc.width + (product.width || 10),
+      };
+    }, { length: 0, height: 0, width: 0 });
+
+    return dimensions;
+  };
+
+  // Função para calcular o frete quando o usuário insere o CEP
+  const handleCalculateShipping = async () => {
+    if (cep.length === 8) {
+      const shippingData = await calculateShipping(cep, items);
+      if (shippingData) {
+        setShippingOptions(shippingData);
+        setShippingCost(parseFloat(shippingData[0].Valor.replace(',', '.')));
+      }
+    } else {
+      showToast('CEP inválido', 'error');
+    }
+  };
 
   // Componente de Pagamento
   const PaymentModal = ({ open, onClose, total }) => {
@@ -263,7 +329,7 @@ function Store() {
   const handleAddToCart = (productWithDetails) => {
     addItem({
       ...productWithDetails,
-      id: `${productWithDetails.id}-${productWithDetails.variation.color}-${productWithDetails.variation.size}`, // ID único para cada variação
+      id: `${productWithDetails.id}-${productWithDetails.variation.color}-${productWithDetails.variation.size}`,
     });
     showToast('Produto adicionado ao carrinho!', 'success');
   };
@@ -272,7 +338,7 @@ function Store() {
   const handleCheckout = async () => {
     if (!user) {
       showToast('Você precisa estar logado para finalizar a compra.', 'error');
-      navigate('/login'); // Redireciona para a tela de login
+      navigate('/login');
       return;
     }
 
@@ -411,9 +477,38 @@ function Store() {
               ))
             )}
             <div className={styles.cartFooter}>
+              <div className={styles.shippingContainer}>
+                <input
+                  type="text"
+                  placeholder="Digite seu CEP"
+                  value={cep}
+                  onChange={(e) => setCep(e.target.value)}
+                  className={styles.cepInput}
+                />
+                <button
+                  className={styles.calculateShippingButton}
+                  onClick={handleCalculateShipping}
+                >
+                  Calcular Frete
+                </button>
+              </div>
+              {shippingOptions.length > 0 && (
+                <div className={styles.shippingOptions}>
+                  {shippingOptions.map((option, index) => (
+                    <div key={index} className={styles.shippingOption}>
+                      <span>{option.Codigo} - {option.PrazoEntrega} dias úteis</span>
+                      <span>R$ {option.Valor.replace(',', '.')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className={styles.totalContainer}>
-                <span>Total:</span>
+                <span>Subtotal:</span>
                 <span className={styles.totalPrice}>R$ {cartTotal.toFixed(2)}</span>
+                <span>Frete:</span>
+                <span className={styles.totalPrice}>R$ {shippingCost.toFixed(2)}</span>
+                <span>Total:</span>
+                <span className={styles.totalPrice}>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
               </div>
               <button
                 className={styles.checkoutButton}
@@ -430,7 +525,7 @@ function Store() {
         <div className={`${styles.overlay} ${openCartModal ? styles.open : ''}`} onClick={() => setOpenCartModal(false)} />
 
         {/* Modal de Pagamento */}
-        <PaymentModal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)} total={cartTotal} />
+        <PaymentModal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)} total={cartTotal + shippingCost} />
 
         {/* Modal do Produto */}
         <ProductModal

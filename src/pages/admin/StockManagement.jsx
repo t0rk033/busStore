@@ -105,7 +105,7 @@ function StockManagement() {
   });
   const [editingCategory, setEditingCategory] = useState(null); // Categoria em edição
 
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("pending");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState({});
 
@@ -114,8 +114,11 @@ function StockManagement() {
   };
 
   const filteredSales = sales.filter((sale) => {
-    if (filter !== "all" && (filter === "shipped") !== sale.shipped)
-      return false;
+    // Filtro por status
+    if (filter === "pending" && sale.shipped) return false;
+    if (filter === "shipped" && !sale.shipped) return false;
+
+    // Filtro por pesquisa
     if (
       search &&
       !sale.user?.details.fullName
@@ -124,6 +127,7 @@ function StockManagement() {
       !sale.id.includes(search)
     )
       return false;
+
     return true;
   });
 
@@ -293,6 +297,39 @@ function StockManagement() {
     }));
   };
 
+  // =================== imprimir funções ===================
+  const handlePrintOrder = (sale) => {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>Pedido #${sale.id.slice(0, 8).toUpperCase()}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .printable-content { max-width: 800px; margin: 0 auto; }
+          h6 { font-size: 18px; }
+          p { font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div id="print-content"></div>
+      </body>
+    </html>
+  `);
+
+    // Renderiza o conteúdo do pedido na nova janela
+    const printContent = printWindow.document.getElementById("print-content");
+    printWindow.ReactDOM.render(
+      <OrderPrintContent sale={sale} />,
+      printContent
+    );
+
+    // Aguarda o conteúdo ser renderizado e imprime
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
   // =================== Product Functions ===================
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -947,27 +984,27 @@ function StockManagement() {
 
                           {/* Campo de Fornecedor (mantido) */}
                           <Grid item xs={12} md={6}>
-  <TextField
-    select
-    label="Fornecedor"
-    name="supplierId"
-    value={newProduct.supplierId}
-    onChange={handleInputChange}
-    fullWidth
-    size="small"
-    variant="filled"
-    SelectProps={{
-      native: true,
-    }}
-  >
-    <option value=""></option>
-    {suppliers.map((supplier) => (
-      <option key={supplier.id} value={supplier.id}>
-        {supplier.name}
-      </option>
-    ))}
-  </TextField>
-</Grid>
+                            <TextField
+                              select
+                              label="Fornecedor"
+                              name="supplierId"
+                              value={newProduct.supplierId}
+                              onChange={handleInputChange}
+                              fullWidth
+                              size="small"
+                              variant="filled"
+                              SelectProps={{
+                                native: true,
+                              }}
+                            >
+                              <option value=""></option>
+                              {suppliers.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>
+                                  {supplier.name}
+                                </option>
+                              ))}
+                            </TextField>
+                          </Grid>
                         </Grid>
                         {/* campo de imagem */}
 
@@ -1737,7 +1774,11 @@ function StockManagement() {
                             }
                             sx={{ mt: 2 }}
                           />
-                          <Button startIcon={<Print />} sx={{ mt: 1 }}>
+                          <Button
+                            startIcon={<Print />}
+                            sx={{ mt: 1 }}
+                            onClick={() => handlePrintOrder(sale)}
+                          >
                             Imprimir
                           </Button>
                         </Paper>
