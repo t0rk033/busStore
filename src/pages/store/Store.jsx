@@ -258,11 +258,15 @@ function Store() {
       if (open && !mp) {
         const script = document.createElement('script');
         script.src = 'https://sdk.mercadopago.com/js/v2';
-        script.onload = () => setMp(new window.MercadoPago('TEST-d4b57614-bf60-4dac-b391-944a48b68160', { locale: 'pt-BR' }));
+        script.onload = () => {
+          const publicKey = import.meta.env.VITE_MP_PUBLIC_KEY;
+          setMp(new window.MercadoPago(publicKey, { locale: 'pt-BR' }));
+        };
         document.body.appendChild(script);
         return () => document.body.removeChild(script);
       }
     }, [open, mp]);
+    
 
     // Processamento do pagamento
     useEffect(() => {

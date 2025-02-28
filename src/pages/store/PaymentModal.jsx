@@ -13,7 +13,7 @@ const PaymentModal = ({ open, onClose, total, user, userData, onSuccess, showToa
           const script = document.createElement('script');
           script.src = 'https://sdk.mercadopago.com/js/v2';
           script.onload = () => {
-            setMp(new window.MercadoPago(process.env.REACT_APP_MP_PUBLIC_KEY, {
+            setMp(new window.MercadoPago(import.meta.env.VITE_MP_PUBLIC_KEY, {
               locale: 'pt-BR'
             }));
           };
