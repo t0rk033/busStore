@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+require('dotenv').config();
 
 const app = express();
 
@@ -63,6 +65,54 @@ app.post('/api/process-payment', async (req, res) => {
     res.status(500).json({ 
       message: error.message || 'Erro interno no servidor',
       errorCode: error.code || 'unknown_error'
+    });
+  }
+});
+
+// Endpoint para calcular frete com Melhor Envio
+app.post('/api/shipping-quote', async (req, res) => {
+  const { cepDestino, produtos } = req.body;
+
+  // Validação básica
+  if (!cepDestino || !Array.isArray(produtos) || produtos.length === 0) {
+    return res.status(400).json({ message: 'Dados de frete incompletos' });
+  }
+
+  try {
+    // Mapear os produtos para o formato exigido pela API da Melhor Envio
+    const items = produtos.map(produto => ({
+      width: produto.largura,
+      height: produto.altura,
+      length: produto.comprimento,
+      weight: produto.peso,
+      insurance_value: produto.valor || 0, // Valor do seguro (opcional)
+      quantity: produto.quantidade
+    }));
+
+    const response = await axios.post(
+      'https://sandbox.melhorenvio.com.br/api/v2/me/shipment/calculate',
+      {
+        from: { postal_code: '36047040' }, // CEP da loja de origem
+        to: { postal_code: cepDestino }, // CEP do cliente
+        products: items
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${process.env.MELHOR_ENVIO_TOKEN}` // Use variáveis de ambiente
+        }
+      }
+    );
+
+    // Retornar as opções de frete
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('Erro ao consultar frete:', error.response?.data || error.message);
+    res.status(500).json({
+      message: 'Erro ao calcular frete',
+      details: error.response?.data || error.message
     });
   }
 });

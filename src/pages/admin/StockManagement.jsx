@@ -908,7 +908,7 @@ function StockManagement() {
                                     field === "sku"
                                       ? "SKU"
                                       : field.charAt(0).toUpperCase() +
-                                        field.slice(1)
+                                      field.slice(1)
                                   }
                                   name={field}
                                   value={newProduct[field]}
@@ -1066,8 +1066,8 @@ function StockManagement() {
                                       field === "costPrice"
                                         ? "Preço de Custo"
                                         : field === "salePrice"
-                                        ? "Preço de Venda"
-                                        : "Peso (kg)"
+                                          ? "Preço de Venda"
+                                          : "Peso (kg)"
                                     }
                                     name={field}
                                     value={newProduct[field]}
@@ -1093,8 +1093,8 @@ function StockManagement() {
                                     dim === "length"
                                       ? "Comprimento (cm)"
                                       : dim === "width"
-                                      ? "Largura (cm)"
-                                      : "Altura (cm)"
+                                        ? "Largura (cm)"
+                                        : "Altura (cm)"
                                   }
                                   name={dim}
                                   value={newProduct.dimensions[dim]}
@@ -1161,10 +1161,10 @@ function StockManagement() {
                                               field === "size"
                                                 ? "Tamanho"
                                                 : field === "color"
-                                                ? "Cor"
-                                                : field === "model"
-                                                ? "Modelo"
-                                                : "Estoque"
+                                                  ? "Cor"
+                                                  : field === "model"
+                                                    ? "Modelo"
+                                                    : "Estoque"
                                             }
                                             value={variation[field]}
                                             onChange={(e) =>
@@ -1670,7 +1670,7 @@ function StockManagement() {
                                 {sale.date?.toLocaleDateString("pt-BR")} (
                                 {Math.round(
                                   (new Date() - sale.date) /
-                                    (1000 * 60 * 60 * 24)
+                                  (1000 * 60 * 60 * 24)
                                 )}{" "}
                                 dias atrás)
                               </Typography>

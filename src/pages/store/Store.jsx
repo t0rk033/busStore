@@ -196,69 +196,58 @@ function Store() {
     }
   }, [cartTotal, items, user, userData, emptyCart, showToast, shippingCost]);
 
-  // Função para calcular o frete
-  const calculateShipping = async (cep, products) => {
-    const format = 'json';
-    const service = '04014'; // Código do serviço dos Correios (ex: 04014 é o código para SEDEX)
-    const originCep = '36047040'; // CEP de origem (substitua pelo CEP da sua loja)
-
-    // Calcular peso total e dimensões do pacote
-    const totalWeight = products.reduce((acc, product) => acc + (product.weight || 1) * product.quantity, 0);
-    const packageDimensions = calculatePackageDimensions(products); // Função para calcular dimensões do pacote
-
-    const params = new URLSearchParams({
-      nCdServico: service,
-      sCepOrigem: originCep,
-      sCepDestino: cep,
-      nVlPeso: totalWeight,
-      nVlComprimento: packageDimensions.length,
-      nVlAltura: packageDimensions.height,
-      nVlLargura: packageDimensions.width,
-      nCdFormato: '1', // Formato da encomenda (1 para caixa/pacote)
-      nVlDiametro: '0',
-      sCdMaoPropria: 'N',
-      nVlValorDeclarado: '0',
-      sCdAvisoRecebimento: 'N',
-      StrRetorno: format,
-    });
-
+  // Função para calcular o frete 
+  const handleCalculateShipping = async () => {
+    if (cep.length !== 8) {
+      showToast('CEP inválido. Deve ter 8 dígitos.', 'error');
+      return;
+    }
+  
     try {
-      const response = await fetch(`https://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?${params.toString()}`);
-      const data = await response.json();
-      return data;
+      const produtos = items.map(item => ({
+        width: item.dimensions?.width || 10,
+        height: item.dimensions?.height || 10,
+        length: item.dimensions?.length || 10,
+        weight: item.weight || 0.5,
+        insurance_value: item.price * item.quantity,
+        quantity: item.quantity
+      }));
+  
+      const response = await fetch('http://localhost:3000/api/shipping-quote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cepDestino: cep,
+          produtos
+        }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao calcular frete');
+      }
+  
+      const shippingData = await response.json();
+      console.log('Resposta da API de frete:', shippingData); // Inspecione a resposta
+  
+      // Filtra apenas as opções de frete válidas (sem erro)
+      const validShippingOptions = shippingData.filter(option => !option.error);
+  
+      if (validShippingOptions.length === 0) {
+        showToast('Nenhuma opção de frete disponível para o CEP informado.', 'error');
+        return;
+      }
+  
+      // Define as opções de frete e o custo do frete selecionado
+      setShippingOptions(validShippingOptions);
+      setShippingCost(parseFloat(validShippingOptions[0].price)); // Usa o preço da primeira opção válida
     } catch (error) {
       console.error('Erro ao calcular frete:', error);
-      return null;
+      showToast(error.message || 'Erro ao calcular frete. Tente novamente.', 'error');
     }
   };
-
-  // Função para calcular as dimensões do pacote
-  const calculatePackageDimensions = (products) => {
-    // Exemplo simples: soma das dimensões dos produtos
-    const dimensions = products.reduce((acc, product) => {
-      return {
-        length: acc.length + (product.length || 10),
-        height: acc.height + (product.height || 10),
-        width: acc.width + (product.width || 10),
-      };
-    }, { length: 0, height: 0, width: 0 });
-
-    return dimensions;
-  };
-
-  // Função para calcular o frete quando o usuário insere o CEP
-  const handleCalculateShipping = async () => {
-    if (cep.length === 8) {
-      const shippingData = await calculateShipping(cep, items);
-      if (shippingData) {
-        setShippingOptions(shippingData);
-        setShippingCost(parseFloat(shippingData[0].Valor.replace(',', '.')));
-      }
-    } else {
-      showToast('CEP inválido', 'error');
-    }
-  };
-
   // Componente de Pagamento
   const PaymentModal = ({ open, onClose, total }) => {
     const [mp, setMp] = useState(null);
@@ -493,15 +482,19 @@ function Store() {
                 </button>
               </div>
               {shippingOptions.length > 0 && (
-                <div className={styles.shippingOptions}>
-                  {shippingOptions.map((option, index) => (
-                    <div key={index} className={styles.shippingOption}>
-                      <span>{option.Codigo} - {option.PrazoEntrega} dias úteis</span>
-                      <span>R$ {option.Valor.replace(',', '.')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+  <div className={styles.shippingOptions}>
+    {shippingOptions.map((option, index) => (
+      <div
+        key={index}
+        className={styles.shippingOption}
+        onClick={() => setShippingCost(parseFloat(option.price))} // Atualiza o custo do frete
+      >
+        <span>{option.name} - {option.delivery_time} dias úteis</span>
+        <span>R$ {parseFloat(option.price).toFixed(2)}</span>
+      </div>
+    ))}
+  </div>
+)}
               <div className={styles.totalContainer}>
                 <span>Subtotal:</span>
                 <span className={styles.totalPrice}>R$ {cartTotal.toFixed(2)}</span>
