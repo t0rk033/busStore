@@ -232,11 +232,11 @@ function Store() {
       const shippingData = await response.json();
       console.log('Resposta da API de frete:', shippingData); // Inspecione a resposta
   
-      // Filtra apenas as opções de frete válidas (sem erro)
-      const validShippingOptions = shippingData.filter(option => !option.error);
+      // Filtra apenas as opções de frete válidas (sem erro) e que correspondem ao SEDEX
+      const validShippingOptions = shippingData.filter(option => !option.error && option.name.includes('SEDEX'));
   
       if (validShippingOptions.length === 0) {
-        showToast('Nenhuma opção de frete disponível para o CEP informado.', 'error');
+        showToast('Nenhuma opção de frete SEDEX disponível para o CEP informado.', 'error');
         return;
       }
   
@@ -465,52 +465,57 @@ function Store() {
                 </div>
               ))
             )}
-            <div className={styles.cartFooter}>
-              <div className={styles.shippingContainer}>
-                <input
-                  type="text"
-                  placeholder="Digite seu CEP"
-                  value={cep}
-                  onChange={(e) => setCep(e.target.value)}
-                  className={styles.cepInput}
-                />
-                <button
-                  className={styles.calculateShippingButton}
-                  onClick={handleCalculateShipping}
-                >
-                  Calcular Frete
-                </button>
-              </div>
-              {shippingOptions.length > 0 && (
-  <div className={styles.shippingOptions}>
-    {shippingOptions.map((option, index) => (
-      <div
-        key={index}
-        className={styles.shippingOption}
-        onClick={() => setShippingCost(parseFloat(option.price))} // Atualiza o custo do frete
-      >
-        <span>{option.name} - {option.delivery_time} dias úteis</span>
-        <span>R$ {parseFloat(option.price).toFixed(2)}</span>
-      </div>
-    ))}
+    <div className={styles.cartFooter}>
+  <div className={styles.shippingContainer}>
+    <input
+      type="text"
+      placeholder="Digite seu CEP"
+      value={cep}
+      onChange={(e) => setCep(e.target.value)}
+      className={styles.cepInput}
+      maxLength={8} // Limita o CEP a 8 dígitos
+    />
+    <button
+      className={styles.calculateShippingButton}
+      onClick={handleCalculateShipping}
+      disabled={cep.length !== 8} // Desabilita o botão se o CEP não tiver 8 dígitos
+    >
+      Calcular Frete
+    </button>
   </div>
-)}
-              <div className={styles.totalContainer}>
-                <span>Subtotal:</span>
-                <span className={styles.totalPrice}>R$ {cartTotal.toFixed(2)}</span>
-                <span>Frete:</span>
-                <span className={styles.totalPrice}>R$ {shippingCost.toFixed(2)}</span>
-                <span>Total:</span>
-                <span className={styles.totalPrice}>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
-              </div>
-              <button
-                className={styles.checkoutButton}
-                onClick={handleCheckout}
-                disabled={items.length === 0}
-              >
-                Finalizar Compra
-              </button>
-            </div>
+
+  {shippingOptions.length > 0 && (
+    <div className={styles.shippingOptions}>
+      {shippingOptions.map((option, index) => (
+        <div
+          key={index}
+          className={`${styles.shippingOption} ${shippingCost === parseFloat(option.price) ? styles.selected : ''}`}
+          onClick={() => setShippingCost(parseFloat(option.price))}
+        >
+          <span>{option.name} - {option.delivery_time} dias úteis</span>
+          <span>R$ {parseFloat(option.price).toFixed(2)}</span>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <div className={styles.totalContainer}>
+    <span>Subtotal:</span>
+    <span className={styles.totalPrice}>R$ {cartTotal.toFixed(2)}</span>
+    <span>Frete:</span>
+    <span className={styles.totalPrice}>R$ {shippingCost.toFixed(2)}</span>
+    <span>Total:</span>
+    <span className={styles.totalPrice}>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
+  </div>
+
+  <button
+    className={styles.checkoutButton}
+    onClick={handleCheckout}
+    disabled={items.length === 0}
+  >
+    Finalizar Compra
+  </button>
+</div>
           </div>
         </div>
 

@@ -20,6 +20,7 @@ import {
   Badge,
   Select,
   MenuItem,
+  useMediaQuery,
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
 import ContactsIcon from "@mui/icons-material/Contacts";
@@ -64,6 +65,7 @@ import ImageUpload from "../../components/ImageUpload";
 
 function StockManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [activeView, setActiveView] = useState("products");
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
@@ -628,74 +630,40 @@ function StockManagement() {
 
               {/* Stats Cards */}
               <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined">
-                    <CardContent
-                      sx={{ display: "flex", alignItems: "center", gap: 3 }}
-                    >
-                      <TrendingUp
-                        sx={{ fontSize: 40, color: theme.palette.success.main }}
-                      />
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Vendas Totais
-                        </Typography>
-                        <Typography variant="h4" fontWeight="700">
-                          R$ {totalSales.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined">
-                    <CardContent
-                      sx={{ display: "flex", alignItems: "center", gap: 3 }}
-                    >
-                      <Storage
-                        sx={{ fontSize: 40, color: theme.palette.info.main }}
-                      />
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Produtos Cadastrados
-                        </Typography>
-                        <Typography variant="h4" fontWeight="700">
-                          {products.length}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Card variant="outlined">
-                    <CardContent
-                      sx={{ display: "flex", alignItems: "center", gap: 3 }}
-                    >
-                      <Warning
-                        sx={{ fontSize: 40, color: theme.palette.error.main }}
-                      />
-                      <Box>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          Produtos com Baixo Estoque
-                        </Typography>
-                        <Typography variant="h4" fontWeight="700">
-                          {
-                            products.filter(
-                              (p) =>
-                                p.variations.reduce(
-                                  (acc, curr) => acc + curr.stock,
-                                  0
-                                ) < p.minStock
-                            ).length
-                          }
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+  {[
+    {
+      icon: <TrendingUp sx={{ fontSize: 40, color: theme.palette.success.main }} />,
+      label: "Vendas Totais",
+      value: `R$ ${totalSales.toFixed(2)}`,
+    },
+    {
+      icon: <Storage sx={{ fontSize: 40, color: theme.palette.info.main }} />,
+      label: "Produtos Cadastrados",
+      value: products.length,
+    },
+    {
+      icon: <Warning sx={{ fontSize: 40, color: theme.palette.error.main }} />,
+      label: "Produtos com Baixo Estoque",
+      value: products.filter((p) => p.variations.reduce((acc, curr) => acc + curr.stock, 0) < p.minStock).length,
+    },
+  ].map((stat, index) => (
+    <Grid item xs={12} sm={6} md={4} key={index}>
+      <Card variant="outlined">
+        <CardContent sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+          {stat.icon}
+          <Box>
+            <Typography variant="subtitle2" color="textSecondary">
+              {stat.label}
+            </Typography>
+            <Typography variant="h4" fontWeight="700">
+              {stat.value}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Grid>
+  ))}
+</Grid>
               {/*categories Form*/}
               <Card sx={{ mb: 4 }}>
                 <CardContent>
@@ -1007,40 +975,67 @@ function StockManagement() {
                           </Grid>
                         </Grid>
                         {/* campo de imagem */}
-
                         <Grid item xs={12}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              mb: 3,
-                            }}
-                          >
-                            <PhotoCamera fontSize="small" color="primary" />
-                            <Typography variant="subtitle1" color="primary">
-                              Fotos do Produto
-                            </Typography>
-                          </Box>
-                          <ImageUpload
-                            onImageUpload={(imageUrl) =>
-                              setNewProduct((prev) => ({
-                                ...prev,
-                                imageUrls: [...prev.imageUrls, imageUrl],
-                              }))
-                            }
-                          />
-                          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                            {newProduct.imageUrls.map((imageUrl, index) => (
-                              <Avatar
-                                key={index}
-                                src={imageUrl}
-                                variant="rounded"
-                                sx={{ width: 100, height: 100 }}
-                              />
-                            ))}
-                          </Box>
-                        </Grid>
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      gap: 1,
+      mb: 3,
+    }}
+  >
+    <PhotoCamera fontSize="small" color="primary" />
+    <Typography variant="subtitle1" color="primary">
+      Fotos do Produto
+    </Typography>
+  </Box>
+  <ImageUpload
+    onImageUpload={(imageUrl) =>
+      setNewProduct((prev) => ({
+        ...prev,
+        imageUrls: [...prev.imageUrls, imageUrl],
+      }))
+    }
+  />
+  <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+    {newProduct.imageUrls.map((imageUrl, index) => (
+      <Box
+        key={index}
+        sx={{ position: "relative", display: "inline-block" }}
+      >
+        <Avatar
+          src={imageUrl}
+          variant="rounded"
+          sx={{ width: 100, height: 100 }}
+        />
+        <IconButton
+          size="small"
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            backgroundColor: "rgba(255, 255, 255, 0.8)",
+            "&:hover": {
+              backgroundColor: "rgba(255, 0, 0, 0.8)",
+            },
+          }}
+          onClick={() => {
+            // Remove a imagem do estado
+            const updatedImageUrls = newProduct.imageUrls.filter(
+              (_, i) => i !== index
+            );
+            setNewProduct((prev) => ({
+              ...prev,
+              imageUrls: updatedImageUrls,
+            }));
+          }}
+        >
+          <Delete fontSize="small" color="error" />
+        </IconButton>
+      </Box>
+    ))}
+  </Box>
+</Grid>
                         <Grid item xs={12}>
                           <Divider sx={{ my: 3 }} />
                           <Box
@@ -1725,6 +1720,20 @@ function StockManagement() {
                                   <Typography variant="body1">
                                     <strong>Endereço:</strong>{" "}
                                     {sale.user?.details.address.street || "N/A"}
+                                  </Typography>
+                                  <Typography variant="body1">
+                                    <strong>Número:</strong>{" "}
+                                    {sale.user?.details.address.number}
+                                  </Typography>
+                                  <Typography variant="body1">
+                                    <strong>bairro:</strong>{" "}
+                                    {sale.user?.details.address.
+neighborhood}
+                                  </Typography>
+                                  <Typography variant="body1">
+                                    <strong>Cep:</strong>{" "}
+                                    {sale.user?.details.address.
+zipCode}
                                   </Typography>
                                 </Grid>
                                 <Grid item xs={12}>

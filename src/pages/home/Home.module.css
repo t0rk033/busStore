@@ -1,7 +1,7 @@
 /* Estilos gerais */
 .firstSection {
   background-image: linear-gradient(to right, #023047, #023047de, rgba(0, 0, 0, 0)), 
-                    url('../../assets/images/background.jpeg');
+                    url('../../assets/images/background3.jpeg');
   background-repeat: no-repeat; 
   background-size: cover;
   background-position: right; 
@@ -433,6 +433,7 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  
 }
 
 .partnersImage img {

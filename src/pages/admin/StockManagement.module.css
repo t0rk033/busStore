@@ -29,6 +29,14 @@
     }
   }
 
+  .imageContainer:hover .deleteButton {
+    opacity: 1;
+  }
+  
+  .deleteButton {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
   @media print {
     .printable-content::before {
       content: "Detalhes do Pedido";
