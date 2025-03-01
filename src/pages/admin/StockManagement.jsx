@@ -666,182 +666,121 @@ function StockManagement() {
 </Grid>
               {/*categories Form*/}
               <Card sx={{ mb: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
-                    Lista de Categorias
-                    <Chip
-                      label={`${categories.length} categorias`}
-                      size="small"
-                      sx={{ ml: 2, bgcolor: "action.selected" }}
-                    />
-                  </Typography>
-                  <Grid container spacing={3}>
-                    {categories.map((category) => (
-                      <Grid item xs={12} sm={6} md={4} key={category.id}>
-                        <Card
-                          variant="outlined"
-                          sx={{
-                            position: "relative",
-                            "&:hover": { boxShadow: 4 },
-                          }}
-                        >
-                          <CardContent>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
-                              <Box>
-                                <Typography
-                                  variant="subtitle1"
-                                  fontWeight="600"
-                                >
-                                  {category.name}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  color="textSecondary"
-                                >
-                                  Subcategorias: {category.subcategories.length}
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: "flex", gap: 1 }}>
-                                <IconButton
-                                  onClick={() => startEditingCategory(category)}
-                                >
-                                  <Edit fontSize="small" color="info" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() => deleteCategory(category.id)}
-                                >
-                                  <Delete fontSize="small" color="error" />
-                                </IconButton>
-                              </Box>
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+  <CardContent>
+    <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+      Lista de Categorias
+      <Chip
+        label={`${categories.length} categorias`}
+        size="small"
+        sx={{ ml: 2, bgcolor: "action.selected" }}
+      />
+    </Typography>
 
-                  {/* Formulário de Edição de Categoria */}
-                  {editingCategory && (
-                    <Card sx={{ mt: 4 }}>
-                      <CardContent>
-                        <Typography
-                          variant="h6"
-                          fontWeight="600"
-                          sx={{ mb: 3 }}
-                        >
-                          {editingCategory
-                            ? "Editar Categoria"
-                            : "Nova Categoria"}
-                        </Typography>
-                        <Grid container spacing={3}>
-                          <Grid item xs={12}>
-                            <TextField
-                              label="Nome da Categoria"
-                              name="name"
-                              value={newCategory.name}
-                              onChange={(e) =>
-                                setNewCategory((prev) => ({
-                                  ...prev,
-                                  name: e.target.value,
-                                }))
-                              }
-                              fullWidth
-                              size="small"
-                              variant="filled"
-                            />
-                          </Grid>
-                          <Grid item xs={12}>
-                            <Typography
-                              variant="subtitle1"
-                              color="primary"
-                              sx={{ mb: 2 }}
-                            >
-                              Subcategorias
-                            </Typography>
-                            {newCategory.subcategories.map((subcat, index) => (
-                              <Box
-                                key={index}
-                                sx={{ display: "flex", gap: 2, mb: 2 }}
-                              >
-                                <TextField
-                                  label={`Subcategoria ${index + 1}`}
-                                  value={subcat}
-                                  onChange={(e) =>
-                                    handleSubcategoryChange(
-                                      index,
-                                      e.target.value
-                                    )
-                                  }
-                                  fullWidth
-                                  size="small"
-                                  variant="filled"
-                                />
-                                <IconButton
-                                  onClick={() => {
-                                    const updatedSubcategories =
-                                      newCategory.subcategories.filter(
-                                        (_, i) => i !== index
-                                      );
-                                    setNewCategory((prev) => ({
-                                      ...prev,
-                                      subcategories: updatedSubcategories,
-                                    }));
-                                  }}
-                                >
-                                  <Delete fontSize="small" color="error" />
-                                </IconButton>
-                              </Box>
-                            ))}
-                            <Button
-                              variant="outlined"
-                              startIcon={<Add />}
-                              onClick={addSubcategory}
-                              size="small"
-                            >
-                              Adicionar Subcategoria
-                            </Button>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                gap: 2,
-                                justifyContent: "flex-end",
-                                borderTop: 1,
-                                borderColor: "divider",
-                                pt: 3,
-                              }}
-                            >
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                startIcon={<Cancel />}
-                                onClick={resetCategoryForm}
-                              >
-                                Cancelar
-                              </Button>
-                              <Button
-                                variant="contained"
-                                startIcon={<CheckCircle />}
-                                onClick={saveCategory}
-                                sx={{ minWidth: 200 }}
-                              >
-                                Salvar Categoria
-                              </Button>
-                            </Box>
-                          </Grid>
-                        </Grid>
-                      </CardContent>
-                    </Card>
-                  )}
-                </CardContent>
-              </Card>
+    {/* Botão para adicionar nova categoria */}
+    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+      <Button
+        variant="contained"
+        startIcon={<Add />}
+        onClick={() => {
+          setEditingCategory(null); // Limpa a edição atual
+          setNewCategory({ name: "", subcategories: [] }); // Reseta o formulário
+        }}
+      >
+        Adicionar Categoria
+      </Button>
+    </Box>
+
+    {/* Lista de categorias */}
+    <Grid container spacing={3}>
+      {categories.map((category) => (
+        <Grid item xs={12} sm={6} md={4} key={category.id}>
+          <Card variant="outlined">
+            <CardContent>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="600">
+                    {category.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Subcategorias: {category.subcategories.length}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <IconButton onClick={() => startEditingCategory(category)}>
+                    <Edit fontSize="small" color="info" />
+                  </IconButton>
+                  <IconButton onClick={() => deleteCategory(category.id)}>
+                    <Delete fontSize="small" color="error" />
+                  </IconButton>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+
+    {/* Formulário de categoria (sempre visível) */}
+    <Card sx={{ mt: 4 }}>
+      <CardContent>
+        <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+          {editingCategory ? "Editar Categoria" : "Nova Categoria"}
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <TextField
+              label="Nome da Categoria"
+              name="name"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory((prev) => ({ ...prev, name: e.target.value }))}
+              fullWidth
+              size="small"
+              variant="filled"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" color="primary" sx={{ mb: 2 }}>
+              Subcategorias
+            </Typography>
+            {newCategory.subcategories.map((subcat, index) => (
+              <Box key={index} sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <TextField
+                  label={`Subcategoria ${index + 1}`}
+                  value={subcat}
+                  onChange={(e) => handleSubcategoryChange(index, e.target.value)}
+                  fullWidth
+                  size="small"
+                  variant="filled"
+                />
+                <IconButton
+                  onClick={() => {
+                    const updatedSubcategories = newCategory.subcategories.filter((_, i) => i !== index);
+                    setNewCategory((prev) => ({ ...prev, subcategories: updatedSubcategories }));
+                  }}
+                >
+                  <Delete fontSize="small" color="error" />
+                </IconButton>
+              </Box>
+            ))}
+            <Button variant="outlined" startIcon={<Add />} onClick={addSubcategory} size="small">
+              Adicionar Subcategoria
+            </Button>
+          </Grid>
+          <Grid item xs={12}>
+            <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 3 }}>
+              <Button variant="outlined" color="error" startIcon={<Cancel />} onClick={resetCategoryForm}>
+                Cancelar
+              </Button>
+              <Button variant="contained" startIcon={<CheckCircle />} onClick={saveCategory} sx={{ minWidth: 200 }}>
+                Salvar Categoria
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  </CardContent>
+</Card>
               {/* Product Form */}
               <Card sx={{ mb: 4 }}>
                 <CardContent>
