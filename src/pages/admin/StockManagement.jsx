@@ -221,6 +221,14 @@ function StockManagement() {
     };
   }, []);
   // =================== categories Functions ===================
+
+  const getProductsBySubcategory = (categoryName, subcategoryName) => {
+    return products.filter(
+      (product) =>
+        product.category === categoryName &&
+        product.subcategory === subcategoryName
+    );
+  };
   // Salvar ou editar categoria
   const deleteCategory = async (id) => {
     try {
@@ -665,7 +673,7 @@ function StockManagement() {
   ))}
 </Grid>
               {/*categories Form*/}
-              <Card sx={{ mb: 4 }}>
+    <Card sx={{ mb: 4 }}>
   <CardContent>
     <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
       Lista de Categorias
@@ -677,7 +685,7 @@ function StockManagement() {
     </Typography>
 
     {/* Botão para adicionar nova categoria */}
-    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+    {/* <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
       <Button
         variant="contained"
         startIcon={<Add />}
@@ -688,37 +696,84 @@ function StockManagement() {
       >
         Adicionar Categoria
       </Button>
-    </Box>
+    </Box> */}
 
-    {/* Lista de categorias */}
-    <Grid container spacing={3}>
-      {categories.map((category) => (
-        <Grid item xs={12} sm={6} md={4} key={category.id}>
-          <Card variant="outlined">
-            <CardContent>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box>
-                  <Typography variant="subtitle1" fontWeight="600">
-                    {category.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Subcategorias: {category.subcategories.length}
-                  </Typography>
+    {/* Contêiner com barra de rolagem para a lista de categorias */}
+    <Box sx={{ maxHeight: 400, overflowY: "auto", mb: 2 }}>
+      <Grid container spacing={3}>
+        {categories.map((category) => (
+          <Grid item xs={12} sm={6} md={4} key={category.id}>
+            <Card variant="outlined">
+              <CardContent>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="600">
+                      {category.name}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Subcategorias: {category.subcategories.length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <IconButton onClick={() => startEditingCategory(category)}>
+                      <Edit fontSize="small" color="info" />
+                    </IconButton>
+                    <IconButton onClick={() => deleteCategory(category.id)}>
+                      <Delete fontSize="small" color="error" />
+                    </IconButton>
+                  </Box>
                 </Box>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <IconButton onClick={() => startEditingCategory(category)}>
-                    <Edit fontSize="small" color="info" />
-                  </IconButton>
-                  <IconButton onClick={() => deleteCategory(category.id)}>
-                    <Delete fontSize="small" color="error" />
-                  </IconButton>
+
+                {/* Lista de subcategorias */}
+                <Box sx={{ mt: 2 }}>
+                  {category.subcategories.map((subcategory, index) => (
+                    <Accordion key={index} elevation={0} sx={{ mb: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography variant="body2" fontWeight="500">
+                          {subcategory}
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        {/* Lista de produtos na subcategoria */}
+                        {getProductsBySubcategory(category.name, subcategory).map((product) => (
+                          <Box
+                            key={product.id}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                              mb: 2,
+                            }}
+                          >
+                            <Avatar
+                              src={product.imageUrls[0]}
+                              variant="rounded"
+                              sx={{ width: 40, height: 40 }}
+                            />
+                            <Box>
+                              <Typography variant="body2" fontWeight="500">
+                                {product.name}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                Estoque:{" "}
+                                {product.variations.reduce(
+                                  (acc, curr) => acc + (curr.stock || 0),
+                                  0
+                                )}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
-    </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
 
     {/* Formulário de categoria (sempre visível) */}
     <Card sx={{ mt: 4 }}>
