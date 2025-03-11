@@ -7,7 +7,6 @@ import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, r
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
 import Footer from '../../components/Footer';
-import ProductModal from './ProductModal';
 import { FiSearch, FiX, FiShoppingCart, FiTruck, FiTag, FiChevronRight, FiTrash, FiHeart, FiStar } from 'react-icons/fi';
 
 function Store() {
@@ -36,7 +35,7 @@ function Store() {
   // Função para exibir toasts
   const showToast = useCallback((message, type = 'info') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 5000); // Toast desaparece após 5 segundos
+    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 5000);
   }, []);
 
   // Monitora estado de autenticação e carrega dados do usuário
@@ -98,6 +97,7 @@ function Store() {
     setSelectedCategory('');
     showToast('Filtros limpos com sucesso!', 'success');
   };
+
   // Verifica estoque antes de permitir o pagamento
   const checkStock = useCallback(async () => {
     try {
@@ -250,6 +250,7 @@ function Store() {
       showToast(error.message || 'Erro ao calcular frete. Tente novamente.', 'error');
     }
   };
+
   // Componente de Pagamento
   const PaymentModal = ({ open, onClose, total }) => {
     const [mp, setMp] = useState(null);
@@ -312,15 +313,20 @@ function Store() {
     }, [mp, open, total, formInitialized, user, handleSuccessfulPayment]);
 
     return (
-      <div className={`${styles.paymentModal} ${open ? styles.open : ''}`}>
-        <div className={styles.paymentContent}>
+      <div className={`${styles.paymentModalOverlay} ${open ? styles.open : ''}`}>
+        <div className={styles.paymentModalContent}>
           <h2>Finalizar Pagamento</h2>
-          <div id="payment-form" />
+          <p>Total: R$ {total.toFixed(2)}</p>
+          <div className={styles.paymentFormContainer}>
+            <div id="payment-form" />
+          </div>
+          <button className={styles.modalCloseButton} onClick={onClose}>
+            <FiX size={24} />
+          </button>
         </div>
       </div>
     );
   };
-
   const handleAddToCart = (productWithDetails) => {
     addItem({
       ...productWithDetails,
@@ -606,18 +612,39 @@ function Store() {
 
       {/* Modal de Pagamento */}
       <PaymentModal 
-  open={openPaymentModal} 
-  onClose={() => setOpenPaymentModal(false)} 
-  total={cartTotal + shippingCost}
-/>
-
-      {/* Modal do Produto */}
-      <ProductModal
-        open={openProductModal}
-        onClose={() => setOpenProductModal(false)}
-        product={selectedProduct}
-        addToCart={handleAddToCart}
+        open={openPaymentModal} 
+        onClose={() => setOpenPaymentModal(false)} 
+        total={cartTotal + shippingCost}
       />
+
+      {/* Modal de Produto */}
+      <div className={`${styles.productModalOverlay} ${openProductModal ? styles.open : ''}`}>
+        <div className={styles.productModalContent}>
+          {selectedProduct && (
+            <>
+              <h2>{selectedProduct.name}</h2>
+              <img 
+                src={selectedProduct.imageUrls[0]} 
+                alt={selectedProduct.name} 
+                className={styles.modalProductImage}
+              />
+              <p className={styles.modalProductDescription}>{selectedProduct.description}</p>
+              <button 
+                className={styles.modalAddToCartButton}
+                onClick={() => handleAddToCart(selectedProduct)}
+              >
+                <FiShoppingCart size={16} /> Adicionar ao Carrinho
+              </button>
+              <button 
+                className={styles.modalCloseButton} 
+                onClick={() => setOpenProductModal(false)}
+              >
+                <FiX size={24} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
       <Footer />
     </div>
