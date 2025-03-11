@@ -8,6 +8,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
 import Footer from '../../components/Footer';
 import ProductModal from './ProductModal';
+import { FiSearch, FiX, FiShoppingCart, FiTruck, FiTag, FiChevronRight, FiTrash, FiHeart, FiStar } from 'react-icons/fi';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -32,9 +33,10 @@ function Store() {
 
   const navigate = useNavigate();
 
+  // Função para exibir toasts
   const showToast = useCallback((message, type = 'info') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 5000);
+    setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 5000); // Toast desaparece após 5 segundos
   }, []);
 
   // Monitora estado de autenticação e carrega dados do usuário
@@ -94,8 +96,8 @@ function Store() {
     setMinPrice('');
     setMaxPrice('');
     setSelectedCategory('');
+    showToast('Filtros limpos com sucesso!', 'success');
   };
-
   // Verifica estoque antes de permitir o pagamento
   const checkStock = useCallback(async () => {
     try {
@@ -342,26 +344,32 @@ function Store() {
   };
 
   return (
-    <div>
+    <div className={styles.storeWrapper}>
       <NavBar />
-      <div className={styles.storeContainer}>
-        {/* Toast */}
-        {toast.show && (
-          <div className={`${styles.toast} ${styles[toast.type]}`}>
-            {toast.message}
+      
+      {/* Hero Section */}
+      <div className={styles.heroSection}>
+        <div className={styles.heroContent}>
+          <h1 className={styles.heroTitle}>Bem-vindo à nossa loja</h1>
+          <p className={styles.heroSubtitle}>Descubra os melhores produtos com descontos exclusivos</p>
+          <div className={styles.searchBar}>
+            <input
+              type="text"
+              placeholder="O que você está procurando?"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button className={styles.searchButton}>
+              <FiSearch size={20} />
+            </button>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Barra de Pesquisa e Filtros */}
-        <div className={styles.filterContainer}>
-          <input
-            type="text"
-            placeholder="Pesquisar por nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.searchInput}
-          />
-
+      {/* Filtros */}
+      <div className={styles.filtersContainer}>
+        <div className={styles.filterSection}>
+          <h3 className={styles.filterTitle}><FiTag size={18} /> Categorias</h3>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -374,169 +382,242 @@ function Store() {
               </option>
             ))}
           </select>
-
-          <input
-            type="number"
-            placeholder="Preço Mínimo"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            className={styles.priceFilter}
-          />
-
-          <input
-            type="number"
-            placeholder="Preço Máximo"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            className={styles.priceFilter}
-          />
-
-          <button onClick={clearFilters} className={styles.clearFiltersButton}>
-            Limpar Filtros
-          </button>
         </div>
 
-        {/* Lista de Produtos Filtrados */}
-        <div className={styles.productGrid}>
-          {filteredProducts.map(product => (
-            <div key={product.id} className={styles.productCard}>
-              <img
-                src={product.imageUrls[0]}
-                alt={product.name}
-                className={styles.productImage}
-                onClick={() => { setSelectedProduct(product); setOpenProductModal(true); }}
-              />
-              <div className={styles.productName}>{product.name}</div>
-              <div className={styles.productCategory}>{product.category}</div>
-              <div className={styles.productPrice}>R$ {product.salePrice.toFixed(2)}</div>
-              <button
-                className={styles.addToCartButton}
-                onClick={() => {
-                  setSelectedProduct(product);
-                  setOpenProductModal(true);
-                }}
-              >
-                Adicionar ao Carrinho
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Carrinho */}
-        <div className={styles.cartIcon} onClick={() => setOpenCartModal(true)}>
-          <span className={styles.cartBadge}>{items.length}</span> 🛒
-        </div>
-
-        {/* Modal do Carrinho */}
-        <div className={`${styles.cartModal} ${openCartModal ? styles.open : ''}`}>
-          <div className={styles.cartContent}>
-            <h2 className={styles.cartTitle}>Carrinho de Compras</h2>
-            {items.length === 0 ? (
-              <div className={styles.cartEmpty}>Seu carrinho está vazio.</div>
-            ) : (
-              items.map(item => (
-                <div key={item.id} className={styles.cartItem}>
-                  <div className={styles.cartItemDetails}>
-                    <div className={styles.cartItemName}>
-                      {item.name} - R$ {item.price.toFixed(2)}
-                    </div>
-                    <div className={styles.cartItemVariation}>
-                      <span>Cor: {item.variation.color}</span>
-                      <span>Tamanho: {item.variation.size}</span>
-                    </div>
-                  </div>
-                  <div className={styles.quantityControls}>
-                    <button
-                      className={styles.quantityButton}
-                      onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
-                    >
-                      -
-                    </button>
-                    <div className={styles.cartItemQuantity}>{item.quantity}</div>
-                    <button
-                      className={styles.quantityButton}
-                      onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button
-                    className={styles.removeButton}
-                    onClick={() => removeItem(item.id)}
-                  >
-                    Remover
-                  </button>
-                </div>
-              ))
-            )}
-    <div className={styles.cartFooter}>
-  <div className={styles.shippingContainer}>
-    <input
-      type="text"
-      placeholder="Digite seu CEP"
-      value={cep}
-      onChange={(e) => setCep(e.target.value)}
-      className={styles.cepInput}
-      maxLength={8} // Limita o CEP a 8 dígitos
-    />
-    <button
-      className={styles.calculateShippingButton}
-      onClick={handleCalculateShipping}
-      disabled={cep.length !== 8} // Desabilita o botão se o CEP não tiver 8 dígitos
-    >
-      Calcular Frete
-    </button>
-  </div>
-
-  {shippingOptions.length > 0 && (
-    <div className={styles.shippingOptions}>
-      {shippingOptions.map((option, index) => (
-        <div
-          key={index}
-          className={`${styles.shippingOption} ${shippingCost === parseFloat(option.price) ? styles.selected : ''}`}
-          onClick={() => setShippingCost(parseFloat(option.price))}
-        >
-          <span>{option.name} - {option.delivery_time} dias úteis</span>
-          <span>R$ {parseFloat(option.price).toFixed(2)}</span>
-        </div>
-      ))}
-    </div>
-  )}
-
-  <div className={styles.totalContainer}>
-    <span>Subtotal:</span>
-    <span className={styles.totalPrice}>R$ {cartTotal.toFixed(2)}</span>
-    <span>Frete:</span>
-    <span className={styles.totalPrice}>R$ {shippingCost.toFixed(2)}</span>
-    <span>Total:</span>
-    <span className={styles.totalPrice}>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
-  </div>
-
-  <button
-    className={styles.checkoutButton}
-    onClick={handleCheckout}
-    disabled={items.length === 0}
-  >
-    Finalizar Compra
-  </button>
-</div>
+        <div className={styles.filterSection}>
+          <h3 className={styles.filterTitle}><FiTruck size={18} /> Faixa de Preço</h3>
+          <div className={styles.priceRange}>
+            <input
+              type="number"
+              placeholder="Mínimo"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className={styles.priceInput}
+            />
+            <span className={styles.priceSeparator}>-</span>
+            <input
+              type="number"
+              placeholder="Máximo"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className={styles.priceInput}
+            />
           </div>
         </div>
 
-        {/* Overlay do Carrinho */}
-        <div className={`${styles.overlay} ${openCartModal ? styles.open : ''}`} onClick={() => setOpenCartModal(false)} />
-
-        {/* Modal de Pagamento */}
-        <PaymentModal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)} total={cartTotal + shippingCost} />
-
-        {/* Modal do Produto */}
-        <ProductModal
-          open={openProductModal}
-          onClose={() => setOpenProductModal(false)}
-          product={selectedProduct}
-          addToCart={handleAddToCart}
-        />
+        <button onClick={clearFilters} className={styles.clearFiltersButton}>
+          <FiX size={16} /> Limpar Filtros
+        </button>
       </div>
+
+      {/* Grade de Produtos */}
+      <div className={styles.productsSection}>
+        <h2 className={styles.sectionTitle}>Todos os Produtos</h2>
+        <div className={styles.productGrid}>
+          {filteredProducts.map(product => (
+            <div key={product.id} className={styles.productCard}>
+              <div className={styles.productImageWrapper}>
+                <img src={product.imageUrls[0]} alt={product.name} />
+                {product.discount > 0 && (
+                  <span className={styles.discountBadge}>-{product.discount}%</span>
+                )}
+                <button 
+                  className={styles.favoriteButton}
+                  onClick={() => {/* Lógica para favoritar */}}
+                >
+                  <FiHeart size={20} />
+                </button>
+              </div>
+              <div className={styles.productInfo}>
+                <h3>{product.name}</h3>
+                <div className={styles.rating}>
+                  {[...Array(5)].map((_, i) => (
+                    <FiStar key={i} size={16} color={i < product.rating ? '#FFD700' : '#DDD'} />
+                  ))}
+                </div>
+                <div className={styles.priceContainer}>
+                  <span className={styles.originalPrice}>R$ {product.salePrice.toFixed(2)}</span>
+                  <span className={styles.discountedPrice}>R$ {product.salePrice.toFixed(2)}</span>
+                </div>
+                <button 
+                  className={styles.addToCartButton}
+                  onClick={() => handleAddToCart(product)}
+                >
+                  <FiShoppingCart size={16} /> Adicionar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`${styles.toast} ${styles[toast.type]}`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Botão Flutuante do Carrinho */}
+      <div 
+        className={`${styles.cartIcon} ${items.length > 0 ? styles.pulse : ''}`} 
+        onClick={() => setOpenCartModal(true)}
+      >
+        <FiShoppingCart size={24} />
+        {items.length > 0 && <span className={styles.cartBadge}>{items.length}</span>}
+      </div>
+
+      {/* Carrinho Lateral */}
+      <div className={`${styles.cartModal} ${openCartModal ? styles.open : ''}`}>
+        <div className={styles.cartContent}>
+          <div className={styles.cartHeader}>
+            <h2 className={styles.cartTitle}>Seu Carrinho</h2>
+            <button 
+              className={styles.closeCartButton}
+              onClick={() => setOpenCartModal(false)}
+            >
+              <FiX size={24} />
+            </button>
+          </div>
+
+          {items.length === 0 ? (
+            <div className={styles.cartEmpty}>
+              <p>Seu carrinho está vazio.</p>
+              <button 
+                className={styles.continueShoppingButton}
+                onClick={() => setOpenCartModal(false)}
+              >
+                Continuar Comprando
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className={styles.cartItems}>
+                {items.map(item => (
+                  <div key={item.id} className={styles.cartItem}>
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.name}
+                      className={styles.cartItemImage}
+                    />
+                    <div className={styles.cartItemDetails}>
+                      <h3 className={styles.cartItemName}>{item.name}</h3>
+                      <div className={styles.cartItemVariation}>
+                        <span>Cor: {item.variation.color}</span>
+                        <span>Tamanho: {item.variation.size}</span>
+                      </div>
+                      <div className={styles.cartItemPrice}>
+                        R$ {item.price.toFixed(2)}
+                      </div>
+                      <div className={styles.quantityControls}>
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                        >
+                          -
+                        </button>
+                        <span className={styles.quantityValue}>{item.quantity}</span>
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      className={styles.removeItemButton}
+                      onClick={() => removeItem(item.id)}
+                    >
+                      <FiTrash size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumo do Carrinho */}
+              <div className={styles.cartSummary}>
+                <div className={styles.shippingContainer}>
+                  <input
+                    type="text"
+                    placeholder="Digite seu CEP"
+                    value={cep}
+                    onChange={(e) => setCep(e.target.value)}
+                    className={styles.cepInput}
+                    maxLength={8}
+                  />
+                  <button
+                    className={styles.calculateShippingButton}
+                    onClick={handleCalculateShipping}
+                    disabled={cep.length !== 8}
+                  >
+                    Calcular Frete
+                  </button>
+                </div>
+
+                {shippingOptions.length > 0 && (
+                  <div className={styles.shippingOptions}>
+                    {shippingOptions.map((option, index) => (
+                      <div
+                        key={index}
+                        className={`${styles.shippingOption} ${shippingCost === parseFloat(option.price) ? styles.selected : ''}`}
+                        onClick={() => setShippingCost(parseFloat(option.price))}
+                      >
+                        <span>{option.name} - {option.delivery_time} dias úteis</span>
+                        <span>R$ {parseFloat(option.price).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className={styles.totalContainer}>
+                  <div className={styles.totalRow}>
+                    <span>Subtotal</span>
+                    <span>R$ {cartTotal.toFixed(2)}</span>
+                  </div>
+                  <div className={styles.totalRow}>
+                    <span>Frete</span>
+                    <span>R$ {shippingCost.toFixed(2)}</span>
+                  </div>
+                  <div className={styles.totalRow}>
+                    <span className={styles.totalLabel}>Total</span>
+                    <span className={styles.totalPrice}>R$ {(cartTotal + shippingCost).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button
+                  className={styles.checkoutButton}
+                  onClick={handleCheckout}
+                  disabled={items.length === 0}
+                >
+                  Finalizar Compra <FiChevronRight size={18} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Overlay do Carrinho */}
+      <div 
+        className={`${styles.overlay} ${openCartModal ? styles.open : ''}`} 
+        onClick={() => setOpenCartModal(false)}
+      />
+
+      {/* Modal de Pagamento */}
+      <PaymentModal 
+  open={openPaymentModal} 
+  onClose={() => setOpenPaymentModal(false)} 
+  total={cartTotal + shippingCost}
+/>
+
+      {/* Modal do Produto */}
+      <ProductModal
+        open={openProductModal}
+        onClose={() => setOpenProductModal(false)}
+        product={selectedProduct}
+        addToCart={handleAddToCart}
+      />
 
       <Footer />
     </div>

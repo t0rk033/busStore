@@ -673,7 +673,7 @@ function StockManagement() {
   ))}
 </Grid>
               {/*categories Form*/}
-    <Card sx={{ mb: 4 }}>
+              <Card sx={{ mb: 4 }}>
   <CardContent>
     <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
       Lista de Categorias
@@ -685,7 +685,7 @@ function StockManagement() {
     </Typography>
 
     {/* Botão para adicionar nova categoria */}
-    {/* <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
       <Button
         variant="contained"
         startIcon={<Add />}
@@ -696,77 +696,80 @@ function StockManagement() {
       >
         Adicionar Categoria
       </Button>
-    </Box> */}
+    </Box>
 
     {/* Contêiner com barra de rolagem para a lista de categorias */}
     <Box sx={{ maxHeight: 400, overflowY: "auto", mb: 2 }}>
-      <Grid container spacing={3}>
+      <Grid container spacing={2}> {/* Reduzi o espaçamento entre os cards */}
         {categories.map((category) => (
-          <Grid item xs={12} sm={6} md={4} key={category.id}>
-            <Card variant="outlined">
-              <CardContent>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={category.id}> {/* Aumentei o número de colunas */}
+            <Card variant="outlined" sx={{ p: 1 }}> {/* Reduzi o padding interno */}
+              <CardContent sx={{ p: 1 }}> {/* Reduzi o padding interno */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Box>
-                    <Typography variant="subtitle1" fontWeight="600">
+                    <Typography variant="subtitle2" fontWeight="600"> {/* Reduzi o tamanho da fonte */}
                       {category.name}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="caption" color="textSecondary"> {/* Reduzi o tamanho da fonte */}
                       Subcategorias: {category.subcategories.length}
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", gap: 1 }}>
-                    <IconButton onClick={() => startEditingCategory(category)}>
+                    <IconButton size="small" onClick={() => startEditingCategory(category)}> {/* Reduzi o tamanho do ícone */}
                       <Edit fontSize="small" color="info" />
                     </IconButton>
-                    <IconButton onClick={() => deleteCategory(category.id)}>
+                    <IconButton size="small" onClick={() => deleteCategory(category.id)}> {/* Reduzi o tamanho do ícone */}
                       <Delete fontSize="small" color="error" />
                     </IconButton>
                   </Box>
                 </Box>
 
-                {/* Lista de subcategorias */}
-                <Box sx={{ mt: 2 }}>
-                  {category.subcategories.map((subcategory, index) => (
-                    <Accordion key={index} elevation={0} sx={{ mb: 1 }}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Typography variant="body2" fontWeight="500">
-                          {subcategory}
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        {/* Lista de produtos na subcategoria */}
-                        {getProductsBySubcategory(category.name, subcategory).map((product) => (
-                          <Box
-                            key={product.id}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                              mb: 2,
-                            }}
-                          >
-                            <Avatar
-                              src={product.imageUrls[0]}
-                              variant="rounded"
-                              sx={{ width: 40, height: 40 }}
-                            />
-                            <Box>
-                              <Typography variant="body2" fontWeight="500">
-                                {product.name}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                Estoque:{" "}
-                                {product.variations.reduce(
-                                  (acc, curr) => acc + (curr.stock || 0),
-                                  0
-                                )}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        ))}
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                {/* Lista de subcategorias com scroll e ordenação alfabética */}
+                <Box sx={{ mt: 1 }}>
+                  <Box sx={{ maxHeight: 200, overflowY: "auto", mb: 2 }}> {/* Contêiner com scroll */}
+                    {category.subcategories
+                      .sort((a, b) => a.localeCompare(b)) // Ordena as subcategorias alfabeticamente
+                      .map((subcategory, index) => (
+                        <Accordion key={index} elevation={0} sx={{ mb: 1 }}>
+                          <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography variant="caption" fontWeight="500"> {/* Reduzi o tamanho da fonte */}
+                              {subcategory}
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails sx={{ p: 1 }}>
+  {getProductsBySubcategory(category.name, subcategory).map((product) => (
+    <Box
+      key={product.id}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        mb: 1,
+      }}
+    >
+      <Avatar
+        src={product.imageUrls[0]}
+        variant="rounded"
+        sx={{ width: 30, height: 30 }}
+      />
+      <Box>
+        <Typography variant="caption" fontWeight="500">
+          {product.name}
+        </Typography>
+        <Typography variant="caption" color="textSecondary">
+          Estoque:{" "}
+          {product.variations.reduce(
+            (acc, curr) => acc + (curr.stock || 0),
+            0
+          )}
+        </Typography>
+      </Box>
+    </Box>
+  ))}
+</AccordionDetails>
+                        </Accordion>
+                      ))}
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
