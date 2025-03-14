@@ -4,10 +4,12 @@
   justify-content: space-between;
   padding-left: 6vh;
   padding-right: 6vh;
+  height: 12vh;
+ 
 }
 
 .logo {
-  width: 18vh;
+  width: 14vh;
 }
 
 .navLinks {
@@ -75,8 +77,8 @@
 }
 
 .navbarmain.scrolled {
-  background-color: var(--primary-color);
-  box-shadow: 1px 4px 6px black !important;
+  background-color: black;
+  box-shadow: 1px 4px 6px white !important;
 }
 
 .navbarmain.scrolled .navLinks a {

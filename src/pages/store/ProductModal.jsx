@@ -36,7 +36,7 @@ const style = {
 };
 
 function ProductModal({ open, onClose, product, addToCart }) {
-  if (!product) return null;
+  if (!open || !product) return null; 
 
   const [selectedColor, setSelectedColor] = useState(product.variations?.[0]?.color || null);
   const [selectedSize, setSelectedSize] = useState(null);

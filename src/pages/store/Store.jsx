@@ -8,6 +8,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
 import Footer from '../../components/Footer';
 import { FiSearch, FiX, FiShoppingCart, FiTruck, FiTag, FiChevronRight, FiTrash, FiHeart, FiStar } from 'react-icons/fi';
+import ProductModal from './ProductModal'; // Importe o componente ProductModal
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -327,6 +328,7 @@ function Store() {
       </div>
     );
   };
+
   const handleAddToCart = (productWithDetails) => {
     addItem({
       ...productWithDetails,
@@ -356,7 +358,7 @@ function Store() {
       {/* Hero Section */}
       <div className={styles.heroSection}>
         <div className={styles.heroContent}>
-          <h1 className={styles.heroTitle}>Bem-vindo à nossa loja</h1>
+          <h1 className={styles.heroTitle}>The store on the way!</h1>
           <p className={styles.heroSubtitle}>Descubra os melhores produtos com descontos exclusivos</p>
           <div className={styles.searchBar}>
             <input
@@ -420,8 +422,15 @@ function Store() {
       <div className={styles.productsSection}>
         <h2 className={styles.sectionTitle}>Todos os Produtos</h2>
         <div className={styles.productGrid}>
-          {filteredProducts.map(product => (
-            <div key={product.id} className={styles.productCard}>
+        {filteredProducts.map(product => (
+  <div 
+    key={product.id} 
+    className={styles.productCard}
+    onClick={() => {
+      setSelectedProduct(product); // Primeiro define o produto
+      setOpenProductModal(true);    // Depois abre o modal
+    }}
+  >
               <div className={styles.productImageWrapper}>
                 <img src={product.imageUrls[0]} alt={product.name} />
                 {product.discount > 0 && (
@@ -447,7 +456,10 @@ function Store() {
                 </div>
                 <button 
                   className={styles.addToCartButton}
-                  onClick={() => handleAddToCart(product)}
+                  onClick={() => {
+                    setSelectedProduct(product);
+                    setOpenProductModal(true);
+                  }}
                 >
                   <FiShoppingCart size={16} /> Adicionar
                 </button>
@@ -618,33 +630,15 @@ function Store() {
       />
 
       {/* Modal de Produto */}
-      <div className={`${styles.productModalOverlay} ${openProductModal ? styles.open : ''}`}>
-        <div className={styles.productModalContent}>
-          {selectedProduct && (
-            <>
-              <h2>{selectedProduct.name}</h2>
-              <img 
-                src={selectedProduct.imageUrls[0]} 
-                alt={selectedProduct.name} 
-                className={styles.modalProductImage}
-              />
-              <p className={styles.modalProductDescription}>{selectedProduct.description}</p>
-              <button 
-                className={styles.modalAddToCartButton}
-                onClick={() => handleAddToCart(selectedProduct)}
-              >
-                <FiShoppingCart size={16} /> Adicionar ao Carrinho
-              </button>
-              <button 
-                className={styles.modalCloseButton} 
-                onClick={() => setOpenProductModal(false)}
-              >
-                <FiX size={24} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <ProductModal
+  open={openProductModal}
+  onClose={() => {
+    setOpenProductModal(false);  // Fecha o modal
+    setSelectedProduct(null);    // Limpa o produto selecionado
+  }}
+  product={selectedProduct}
+  addToCart={handleAddToCart}
+/>
 
       <Footer />
     </div>
