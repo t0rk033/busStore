@@ -137,15 +137,15 @@ function Store() {
         await runTransaction(db, async (transaction) => {
           const productDoc = await transaction.get(productRef);
           if (!productDoc.exists()) throw new Error('Produto não encontrado');
-
+  
           const selectedVariation = productDoc.data().variations.find(
             (v) => v.color === item.variation.color && v.size === item.variation.size
           );
-
+  
           if (!selectedVariation || selectedVariation.stock < item.quantity) {
             throw new Error('Estoque insuficiente');
           }
-
+  
           const newStock = selectedVariation.stock - item.quantity;
           transaction.update(productRef, {
             variations: productDoc.data().variations.map((v) =>
@@ -344,13 +344,19 @@ function Store() {
       navigate('/login');
       return;
     }
-
-    if (await checkStock()) {
-      setOpenCartModal(false);
+  
+    // Verifique se há itens no carrinho
+    if (items.length === 0) {
+      showToast('Seu carrinho está vazio.', 'error');
+      return;
+    }
+  
+    // Verifique o estoque antes de abrir o modal de pagamento
+    const stockOk = await checkStock();
+    if (stockOk) {
       setOpenPaymentModal(true);
     }
   };
-
   return (
     <div className={styles.storeWrapper}>
       <NavBar />
@@ -422,51 +428,83 @@ function Store() {
       <div className={styles.productsSection}>
         <h2 className={styles.sectionTitle}>Todos os Produtos</h2>
         <div className={styles.productGrid}>
-        {filteredProducts.map(product => (
-  <div 
-    key={product.id} 
-    className={styles.productCard}
-    onClick={() => {
-      setSelectedProduct(product); // Primeiro define o produto
-      setOpenProductModal(true);    // Depois abre o modal
-    }}
-  >
-              <div className={styles.productImageWrapper}>
-                <img src={product.imageUrls[0]} alt={product.name} />
-                {product.discount > 0 && (
-                  <span className={styles.discountBadge}>-{product.discount}%</span>
-                )}
-                <button 
-                  className={styles.favoriteButton}
-                  onClick={() => {/* Lógica para favoritar */}}
-                >
-                  <FiHeart size={20} />
-                </button>
-              </div>
-              <div className={styles.productInfo}>
-                <h3>{product.name}</h3>
-                <div className={styles.rating}>
-                  {[...Array(5)].map((_, i) => (
-                    <FiStar key={i} size={16} color={i < product.rating ? '#FFD700' : '#DDD'} />
-                  ))}
-                </div>
-                <div className={styles.priceContainer}>
-                  <span className={styles.originalPrice}>R$ {product.salePrice.toFixed(2)}</span>
-                  <span className={styles.discountedPrice}>R$ {product.salePrice.toFixed(2)}</span>
-                </div>
-                <button 
-                  className={styles.addToCartButton}
-                  onClick={() => {
-                    setSelectedProduct(product);
-                    setOpenProductModal(true);
-                  }}
-                >
-                  <FiShoppingCart size={16} /> Adicionar
-                </button>
-              </div>
-            </div>
-          ))}
+  {filteredProducts.map(product => (
+    <div 
+      key={product.id} 
+      className={styles.productCard}
+      onClick={() => {
+        setSelectedProduct(product);
+        setOpenProductModal(true);
+      }}
+    >
+      <div className={styles.productImageContainer}>
+        <div className={styles.imageWrapper}>
+          <img 
+            src={product.imageUrls[0]} 
+            alt={product.name} 
+            className={styles.productImage}
+            loading="lazy" // Lazy loading for better performance
+          />
+          {product.discount > 0 && (
+            <span className={styles.discountBadge}>-{product.discount}%</span>
+          )}
+          <button 
+            className={styles.favoriteButton}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering card click
+              /* Favorite logic here */
+            }}
+          >
+            <FiHeart size={20} />
+          </button>
         </div>
+      </div>
+      
+      <div className={styles.productDetails}>
+        <div className={styles.productHeader}>
+          <h3 className={styles.productTitle}>{product.name}</h3>
+          <div className={styles.rating}>
+            {[...Array(5)].map((_, i) => (
+              <FiStar 
+                key={i} 
+                size={16} 
+                className={i < product.rating ? styles.filledStar : styles.emptyStar}
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className={styles.priceContainer}>
+          {product.discount > 0 ? (
+            <>
+              <span className={styles.originalPrice}>
+                R$ {product.originalPrice.toFixed(2)}
+              </span>
+              <span className={styles.discountedPrice}>
+                R$ {product.salePrice.toFixed(2)}
+              </span>
+            </>
+          ) : (
+            <span className={styles.regularPrice}>
+              R$ {product.salePrice.toFixed(2)}
+            </span>
+          )}
+        </div>
+        
+        <button 
+          className={styles.addToCartButton}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering card click
+            setSelectedProduct(product);
+            setOpenProductModal(true);
+          }}
+        >
+          <FiShoppingCart size={16} /> Adicionar
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
       </div>
 
       {/* Toast Notification */}
@@ -623,11 +661,24 @@ function Store() {
       />
 
       {/* Modal de Pagamento */}
-      <PaymentModal 
-        open={openPaymentModal} 
-        onClose={() => setOpenPaymentModal(false)} 
-        total={cartTotal + shippingCost}
-      />
+      <PaymentModal
+  open={openPaymentModal}
+  onClose={() => setOpenPaymentModal(false)}
+  total={cartTotal + shippingCost}
+  user={user}
+  userData={{
+    items: items.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      variation: item.variation
+    })),
+    cpf: userData?.cpf || ''
+  }}
+  onSuccess={handleSuccessfulPayment}
+  showToast={showToast}
+/>
 
       {/* Modal de Produto */}
       <ProductModal
