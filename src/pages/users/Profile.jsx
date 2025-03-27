@@ -48,56 +48,32 @@ function Profile() {
     const fetchSalesHistory = async () => {
       if (user) {
         try {
-          // Busca todos os documentos da coleção 'sales'
-          const salesQuery = collection(db, 'sales');
+          // Busca as vendas na coleção 'sales' filtrando pelo UID do usuário logado
+          const salesQuery = query(
+            collection(db, 'sales'),
+            where('user.uid', '==', user.uid)
+          );
           const salesSnapshot = await getDocs(salesQuery);
-  
-          const orders = [];
-  
-          // Itera sobre cada venda
-          for (const saleDoc of salesSnapshot.docs) {
-            // Busca a subcoleção 'user' para verificar se o pedido pertence ao usuário logado
-            const userSubcollection = collection(db, 'sales', saleDoc.id, 'user');
-            const userSnapshot = await getDocs(userSubcollection);
-  
-            // Verifica se algum documento na subcoleção 'user' contém o UID do usuário logado
-            const userDoc = userSnapshot.docs.find((doc) => doc.data().uid === user.uid);
-  
-            if (userDoc) {
-              console.log('Pedido pertence ao usuário:', saleDoc.id);
-  
-              // Busca os itens da subcoleção 'items'
-              const itemsSubcollection = collection(db, 'sales', saleDoc.id, 'items');
-              const itemsSnapshot = await getDocs(itemsSubcollection);
-              const items = itemsSnapshot.docs.map((doc) => doc.data());
-  
-              // Busca os dados de pagamento da subcoleção 'payment'
-              const paymentSubcollection = collection(db, 'sales', saleDoc.id, 'payment');
-              const paymentSnapshot = await getDocs(paymentSubcollection);
-              const payment = paymentSnapshot.docs[0]?.data();
-  
-              // Adiciona o pedido ao histórico
-              orders.push({
-                id: saleDoc.id,
-                date: saleDoc.data().date?.toDate().toLocaleDateString('pt-BR'),
-                total: saleDoc.data().total,
-                status: saleDoc.data().shipped ? 'Enviado' : 'Processando',
-                items: items,
-                payment: payment,
-                user: userDoc.data() // Dados do usuário
-              });
-            }
-          }
-  
+
+          const orders = salesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            date: doc.data().date?.toDate().toLocaleDateString('pt-BR'),
+            total: doc.data().total,
+            status: doc.data().payment?.status || 'Desconhecido',
+            items: doc.data().items || [],
+          }));
+
           // Ordena os pedidos por data (do mais recente para o mais antigo)
           setSalesHistory(orders.sort((a, b) => new Date(b.date) - new Date(a.date)));
         } catch (error) {
-          console.error('Erro ao carregar histórico:', error);
+          console.error('Erro ao carregar histórico de pedidos:', error);
           setMessage('Erro ao carregar histórico de pedidos');
+        } finally {
+          setLoading(false);
         }
       }
     };
-  
+
     fetchSalesHistory();
   }, [user]);
 
@@ -284,40 +260,21 @@ function Profile() {
                           <FaCalendarAlt /> {order.date}
                         </span>
                       </div>
-                      <div className={`${styles.status} ${order.status === 'Enviado' ? styles.shipped : styles.processing}`}>
+                      <div className={`${styles.status} ${order.status === 'approved' ? styles.shipped : styles.processing}`}>
                         {order.status}
                       </div>
                     </div>
-
-                    <div className={styles.orderBody}>
-                      <div className={styles.orderSection}>
-                        <h4><FaBox /> Produtos</h4>
-                        {order.items.map((item, index) => (
-                          <div key={index} className={styles.orderItem}>
-                            <div className={styles.itemInfo}>
-                              <span className={styles.itemName}>{item.name}</span>
-                              <span className={styles.itemQuantity}>x{item.quantity}</span>
-                            </div>
-                            <span className={styles.itemPrice}>
-                              R$ {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className={styles.orderSection}>
-                        <h4><FaMoneyBillWave /> Pagamento</h4>
-                        <p>
-                          Método: {order.payment?.method || 'Não informado'}<br />
-                          Status: {order.payment?.status || 'Não informado'}
-                        </p>
-                      </div>
-
-                      <div className={styles.orderTotal}>
-                        <FaMoneyBillWave />
-                        <span>Total:</span>
-                        <strong>R$ {order.total.toFixed(2)}</strong>
-                      </div>
+                    <div className={styles.orderItems}>
+                      {order.items.map((item, index) => (
+                        <div key={index} className={styles.orderItem}>
+                          <span>{item.name}</span>
+                          <span>{item.quantity}x</span>
+                          <span>R$ {item.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.orderTotal}>
+                      Total: R$ {order.total.toFixed(2)}
                     </div>
                   </div>
                 ))}

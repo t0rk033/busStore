@@ -21,63 +21,138 @@ const client = new MercadoPagoConfig({
   accessToken: 'TEST-2424042295647561-020514-9b1628e7f33b6ff8f121ea721bc3ffd7-1804058981', // Token de acesso do Mercado Pago
 });
 
+const mercadoPago = {
+  payment: new Payment(client)
+};
+
+// Mapeamento de status do Mercado Pago para respostas mais descritivas
+const paymentStatusMessages = {
+  'approved': {
+    status: 'approved',
+    message: 'Pagamento aprovado com sucesso!',
+    description: 'Seu pagamento foi aprovado e o pedido está sendo processado.'
+  },
+  'pending': {
+    status: 'pending',
+    message: 'Pagamento pendente de confirmação',
+    description: 'Seu pagamento está sendo processado. Em breve você receberá uma confirmação.'
+  },
+  'authorized': {
+    status: 'authorized',
+    message: 'Pagamento autorizado',
+    description: 'Seu pagamento foi autorizado e está aguardando confirmação.'
+  },
+  'in_process': {
+    status: 'in_process',
+    message: 'Pagamento em análise',
+    description: 'Seu pagamento está sendo analisado. Isso pode levar até 2 dias úteis.'
+  },
+  'rejected': {
+    status: 'rejected',
+    message: 'Pagamento recusado',
+    description: 'Infelizmente seu pagamento foi recusado. Por favor, tente novamente com outro método de pagamento.'
+  },
+  'cancelled': {
+    status: 'cancelled',
+    message: 'Pagamento cancelado',
+    description: 'O pagamento foi cancelado antes da conclusão.'
+  },
+  'refunded': {
+    status: 'refunded',
+    message: 'Pagamento reembolsado',
+    description: 'O valor do pagamento foi devolvido ao cliente.'
+  },
+  'charged_back': {
+    status: 'charged_back',
+    message: 'Estorno realizado',
+    description: 'Foi realizado um estorno no valor do pagamento.'
+  }
+};
+
 // Endpoint para processar pagamentos
 app.post('/api/process-payment', async (req, res) => {
-  const { token, amount, email } = req.body;
-
-  console.log('Dados recebidos no backend:', { token, amount, email });
-
   try {
-    // Validação básica dos dados
+    const { token, amount, description, installments, payment_method_id, issuer_id, email } = req.body;
+
+    // Validação dos dados obrigatórios
     if (!token || !amount || !email) {
-      return res.status(400).json({ message: 'Dados de pagamento incompletos' });
+      return res.status(400).json({
+        status: 'invalid_request',
+        message: 'Dados de pagamento incompletos',
+        details: 'Token, valor e email são obrigatórios'
+      });
     }
 
     const paymentData = {
-      transaction_amount: Number(amount), // Valor da transação
-      token, // Token do cartão
-      description: 'Compra na loja', // Descrição da compra
-      installments: 1, // Número de parcelas
-      payer: { email }, // Email do pagador
+      token,
+      transaction_amount: Number(amount),
+      description: description || 'Compra no BatataBowl',
+      installments: installments ? Number(installments) : 1,
+      payment_method_id: payment_method_id || null,
+      issuer_id: issuer_id || null,
+      payer: {
+        email,
+        identification: {
+          type: req.body.identification_type || 'CPF',
+          number: req.body.identification_number || ''
+        }
+      }
     };
 
-    const payment = new Payment(client);
-    const response = await payment.create({ body: paymentData });
+    const paymentResponse = await mercadoPago.payment.create({ body: paymentData });
 
-    console.log('Resposta do Mercado Pago:', response);
+    // Obter a resposta padrão baseada no status
+    const statusResponse = paymentStatusMessages[paymentResponse.status] || {
+      status: paymentResponse.status,
+      message: 'Status de pagamento desconhecido',
+      description: 'O status do pagamento não pôde ser determinado.'
+    };
 
-    // Verifica a resposta do Mercado Pago
-    if (!response || !response.id) {
-      throw new Error('Resposta inválida do gateway de pagamento');
-    }
+    // Montar resposta completa
+    const response = {
+      ...statusResponse,
+      payment_id: paymentResponse.id,
+      date_created: paymentResponse.date_created,
+      date_approved: paymentResponse.date_approved,
+      date_last_updated: paymentResponse.date_last_updated,
+      payment_method: paymentResponse.payment_method_id,
+      payment_type: paymentResponse.payment_type_id,
+      status_detail: paymentResponse.status_detail,
+      currency_id: paymentResponse.currency_id,
+      transaction_amount: paymentResponse.transaction_amount,
+      installments: paymentResponse.installments,
+      taxes_amount: paymentResponse.taxes_amount,
+      shipping_amount: paymentResponse.shipping_amount,
+      collector_id: paymentResponse.collector_id,
+      payer: paymentResponse.payer
+    };
 
-    // Determina o status da compra
-    let status;
-    if (response.status === 'approved') {
-      status = 'approved'; // Pagamento aprovado
-    } else if (response.status === 'pending') {
-      status = 'pending'; // Pagamento pendente
-    } else {
-      status = 'rejected'; // Pagamento rejeitado
-    }
+    // Status HTTP baseado no resultado do pagamento
+    const httpStatus = paymentResponse.status === 'approved' ? 200 : 
+                      paymentResponse.status === 'pending' ? 202 : 400;
 
-    // Resposta completa com dados da transação
-    res.status(200).json({
-      status: status,
-      transactionId: response.id,
-      paymentDetails: {
-        installments: response.installments,
-        payment_method: response.payment_method_id,
-        authorization_code: response.authorization_code,
-      },
-    });
+    return res.status(httpStatus).json(response);
 
   } catch (error) {
     console.error('Erro no processamento do pagamento:', error);
-    res.status(500).json({ 
-      status: 'error', // Adiciona um status de erro
-      message: error.message || 'Erro interno no servidor',
-      errorCode: error.code || 'unknown_error',
+
+    // Tratamento específico para erros do Mercado Pago
+    if (error.response && error.response.data) {
+      const mpError = error.response.data;
+      return res.status(400).json({
+        status: 'mp_error',
+        message: mpError.message || 'Erro no processamento do pagamento',
+        error_code: mpError.error,
+        causes: mpError.causes || [],
+        status_code: mpError.status || 400
+      });
+    }
+
+    // Erro genérico
+    return res.status(500).json({
+      status: 'server_error',
+      message: 'Erro interno no servidor',
+      details: error.message
     });
   }
 });
@@ -88,7 +163,11 @@ app.post('/api/shipping-quote', async (req, res) => {
 
   // Validação básica
   if (!cepDestino || !Array.isArray(produtos) || produtos.length === 0) {
-    return res.status(400).json({ message: 'Dados de frete incompletos' });
+    return res.status(400).json({ 
+      status: 'invalid_request',
+      message: 'Dados de frete incompletos',
+      details: 'CEP de destino e lista de produtos são obrigatórios'
+    });
   }
 
   try {
@@ -119,22 +198,31 @@ app.post('/api/shipping-quote', async (req, res) => {
       }
     );
 
-    // Retorna as opções de frete para o frontend
-    res.json(response.data);
+    // Retorna as opções de frete para o frontend com estrutura padronizada
+    res.json({
+      status: 'success',
+      data: response.data,
+      message: 'Cálculo de frete realizado com sucesso'
+    });
 
   } catch (error) {
     console.error('Erro ao consultar frete:', error.response?.data || error.message);
     res.status(500).json({
-      status: 'error', // Adiciona um status de erro
+      status: 'error',
       message: 'Erro ao calcular frete',
       details: error.response?.data || error.message,
+      error_code: error.code
     });
   }
 });
 
 // Rota de teste
 app.get('/', (req, res) => {
-  res.send('Backend da loja está funcionando!');
+  res.json({
+    status: 'success',
+    message: 'Backend da loja está funcionando!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Inicia o servidor

@@ -1,13 +1,95 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import styles from './PaymentModal.module.css';
 
-const PaymentModal = ({ open, onClose, total, user, userData, onSuccess, showToast }) => {
+function PaymentModal({ open, onClose, total, user, userData }) {
   const [mp, setMp] = useState(null);
+  const [formInitialized, setFormInitialized] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [paymentResult, setPaymentResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Mapeamento completo de mensagens
+  const paymentStatusConfig = {
+    // Status aprovados
+    approved: {
+      icon: '✅',
+      title: 'Pagamento Aprovado!',
+      color: 'var(--success-color)',
+      description: (result) => result.description || 'Seu pagamento foi aprovado com sucesso!',
+      showDetails: true
+    },
+    
+    // Status pendentes
+    pending: {
+      icon: '🔄',
+      title: 'Pagamento Pendente',
+      color: 'var(--warning-color)',
+      description: (result) => result.description || 'Seu pagamento está sendo processado.',
+      showDetails: true
+    },
+    authorized: {
+      icon: '🔄',
+      title: 'Pagamento Autorizado',
+      color: 'var(--warning-color)',
+      description: (result) => result.description || 'Seu pagamento foi autorizado e está aguardando confirmação.',
+      showDetails: true
+    },
+    in_process: {
+      icon: '🔄',
+      title: 'Pagamento em Análise',
+      color: 'var(--warning-color)',
+      description: (result) => result.description || 'Seu pagamento está em análise. Isso pode levar até 2 dias úteis.',
+      showDetails: true
+    },
+    
+    // Status de erro/rejeição
+    rejected: {
+      icon: '❌',
+      title: 'Pagamento Recusado',
+      color: 'var(--error-color)',
+      description: (result) => {
+        if (result.status_detail && statusDetailMessages[result.status_detail]) {
+          return statusDetailMessages[result.status_detail];
+        }
+        return result.description || 'Pagamento não aprovado. Por favor, tente novamente.';
+      },
+      showDetails: true
+    },
+    cancelled: {
+      icon: '❌',
+      title: 'Pagamento Cancelado',
+      color: 'var(--error-color)',
+      description: (result) => result.description || 'O pagamento foi cancelado.',
+      showDetails: false
+    },
+    
+    // Status diversos
+    refunded: {
+      icon: '🔄',
+      title: 'Reembolso Efetuado',
+      color: 'var(--info-color)',
+      description: (result) => result.description || 'O valor foi reembolsado para seu método de pagamento.',
+      showDetails: true
+    },
+    charged_back: {
+      icon: '🔄',
+      title: 'Estorno Realizado',
+      color: 'var(--info-color)',
+      description: (result) => result.description || 'Foi realizado um estorno no valor do pagamento.',
+      showDetails: true
+    },
+    
+    // Status padrão
+    default: {
+      icon: '❓',
+      title: 'Status Desconhecido',
+      color: 'var(--text-color)',
+      description: (result) => result.message || 'O status do pagamento não pôde ser determinado.',
+      showDetails: false
+    }
+  };
+
+  // Mensagens detalhadas para status_detail
   const statusDetailMessages = {
     // Erros de cartão
     'cc_rejected_insufficient_amount': 'Saldo insuficiente no cartão. Tente outro método de pagamento.',
@@ -33,45 +115,36 @@ const PaymentModal = ({ open, onClose, total, user, userData, onSuccess, showToa
     'processing_error': 'Erro ao processar pagamento. Tente novamente.',
     'invalid_request': 'Requisição inválida. Verifique os dados.',
     'server_error': 'Erro no servidor. Tente mais tarde.',
-    
-    // Mensagem padrão
-    'default': 'Pagamento não aprovado. Tente novamente ou use outro método.'
+  };
 
-useEffect(() => {
-  if (paymentStatus === 'rejected' && !processing) {
-    showToast("Pagamento não aprovado. Tente outro método.", 'error');
-  }
-}, [paymentStatus, processing]);
   // Inicializa o Mercado Pago
   useEffect(() => {
     if (open && !mp) {
       const script = document.createElement('script');
       script.src = 'https://sdk.mercadopago.com/js/v2';
-      
+
       script.onload = () => {
-        const mpInstance = new window.MercadoPago(import.meta.env.VITE_MP_PUBLIC_KEY, {
-          locale: 'pt-BR'
-        });
-        setMp(mpInstance);
+        const publicKey = import.meta.env.VITE_MP_PUBLIC_KEY;
+        setMp(new window.MercadoPago(publicKey, { locale: 'pt-BR' }));
       };
-      
+
       script.onerror = () => {
-        showToast('Erro ao carregar o sistema de pagamentos', 'error');
+        setErrorMessage('Erro ao carregar o sistema de pagamentos. Recarregue a página.');
       };
-      
+
       document.body.appendChild(script);
-      
+
       return () => {
         document.body.removeChild(script);
       };
     }
-  }, [open, mp, showToast]);
+  }, [open, mp]);
 
   // Configura o formulário de pagamento
   useEffect(() => {
-    if (mp && open) {
+    if (mp && open && !formInitialized) {
       const bricksBuilder = mp.bricks();
-      
+
       bricksBuilder.create('cardPayment', 'payment-form-container', {
         initialization: {
           amount: total,
@@ -79,8 +152,8 @@ useEffect(() => {
             email: user?.email || '',
             identification: {
               type: 'CPF',
-              number: userData?.cpf || ''
-            }
+              number: userData?.cpf || '',
+            },
           },
         },
         callbacks: {
@@ -90,173 +163,181 @@ useEffect(() => {
               await handlePayment(cardFormData);
             } catch (error) {
               console.error('Erro no pagamento:', error);
+              setPaymentResult({
+                status: 'error',
+                message: 'Erro ao processar pagamento',
+                details: error.message
+              });
             }
           },
           onError: (error) => {
             console.error('Erro no formulário:', error);
-            showToast('Erro no formulário de pagamento', 'error');
-          }
-        }
+            setErrorMessage('Erro no formulário de pagamento. Verifique os dados.');
+          },
+        },
       });
+
+      setFormInitialized(true);
     }
   }, [mp, open, total, user, userData]);
 
   // Processa o pagamento
   const handlePayment = async (cardFormData) => {
     setProcessing(true);
+    setErrorMessage('');
+    setPaymentResult(null);
+  
     try {
       const { token, payer: { email } } = cardFormData;
   
-      // Debug: verifique os dados antes de enviar
-      console.log("Dados sendo enviados:", {
-        token: token.substring(0, 5) + "...", // Mostra apenas parte do token por segurança
-        amount: total,
-        email,
-        items: userData.items
-      });
-  
       const response = await fetch(`${process.env.REACT_APP_API_URL}/process-payment`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({
           token,
           amount: total,
           email,
-          items: userData.items
+          identification_type: 'CPF',
+          identification_number: userData?.cpf || ''
         }),
       });
   
       const data = await response.json();
-      console.log("Resposta do backend:", data); // Debug crucial
-  // Dentro da sua função handlePayment, depois de receber a resposta do backend:
-const data = await response.json();
-
-// Fallback 1 - Garante mensagem mesmo se o backend não retornar statusDetail
-if (!response.ok || data.status === 'rejected') {
-  const errorMessage = 
-    data.statusDetail && statusDetailMessages[data.statusDetail]
-      ? statusDetailMessages[data.statusDetail]
-      : data.message || "Seu pagamento foi recusado pelo emissor do cartão";
   
-  showToast(errorMessage, 'error', { duration: 8000 });
-  setPaymentStatus('rejected');
-  return; // Interrompe o fluxo se foi recusado
-}
       if (!response.ok) {
-        // FORÇA a exibição do toast mesmo se o backend não retornar statusDetail
-        const errorMessage = data.statusDetail 
-          ? statusDetailMessages[data.statusDetail] 
-          : data.message || "Pagamento recusado (motivo desconhecido)";
-        
-        showToast(errorMessage, 'error', { duration: 10000 }); // Toast mais longo
-        return;
+        throw new Error(data.message || 'Erro ao processar pagamento');
       }
   
-      if (data.status === 'approved') {
-        await onSuccess(data.transactionId, email);
-      } else {
-        showToast(
-          statusDetailMessages[data.statusDetail] || "Pagamento não aprovado", 
-          'error', 
-          { duration: 10000 }
-        );
-      }
-  
+      // Atualiza o estado com todos os dados do pagamento
+      setPaymentResult(data);
+      
     } catch (error) {
-      console.error("Erro completo:", error); // Debug detalhado
-      showToast(
-        error.message || "Falha ao processar pagamento", 
-        'error', 
-        { duration: 10000 }
-      );
+      console.error('Erro completo:', error);
+      setPaymentResult({
+        status: 'error',
+        message: error.message || 'Erro ao processar pagamento',
+        details: 'Tente novamente ou entre em contato com nosso suporte.'
+      });
     } finally {
       setProcessing(false);
     }
   };
+
+  // Fecha o modal e reseta os estados
+  const handleClose = () => {
+    onClose();
+    // Reseta os estados após um pequeno delay para evitar flickering
+    setTimeout(() => {
+      setPaymentResult(null);
+      setErrorMessage('');
+      setProcessing(false);
+    }, 300);
+  };
+
+  // Obtém a configuração do status atual
+  const getStatusConfig = () => {
+    if (!paymentResult) return paymentStatusConfig.default;
+    return paymentStatusConfig[paymentResult.status] || paymentStatusConfig.default;
+  };
+
+  const statusConfig = getStatusConfig();
 
   if (!open) return null;
 
   return (
     <div className={`${styles.modalOverlay} ${open ? styles.open : ''}`}>
       <div className={styles.modalContent}>
-        <button 
+        <button
           className={styles.closeButton}
-          onClick={onClose}
+          onClick={handleClose}
           disabled={processing}
           aria-label="Fechar modal de pagamento"
         >
           &times;
         </button>
 
-        <h2 className={styles.modalTitle}>Finalizar Pagamento</h2>
-        
-        {/* Status do pagamento */}
-        {paymentStatus === 'approved' && (
-          <div className={styles.successMessage}>
-            <h3>✅ Pagamento Aprovado!</h3>
-            <p>Sua compra foi processada com sucesso.</p>
+        {/* Exibe o formulário ou o resultado do pagamento */}
+        {!paymentResult ? (
+          <>
+            <h2 className={styles.modalTitle}>Finalizar Pagamento</h2>
+            <p className={styles.totalAmount}>Total: R$ {total.toFixed(2)}</p>
+            
+            {/* Formulário de pagamento */}
+            <div id="payment-form-container" className={styles.paymentFormContainer}></div>
+            
+            {errorMessage && (
+              <div className={styles.errorMessage}>
+                <p>{errorMessage}</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className={styles.paymentResult}>
+            <div 
+              className={styles.statusHeader}
+              style={{ color: statusConfig.color }}
+            >
+              <span className={styles.statusIcon}>{statusConfig.icon}</span>
+              <h2>{statusConfig.title}</h2>
+            </div>
+            
+            <p className={styles.statusDescription}>
+              {statusConfig.description(paymentResult)}
+            </p>
+            
+            {/* Detalhes do pagamento */}
+            {statusConfig.showDetails && paymentResult && (
+              <div className={styles.paymentDetails}>
+                <h3>Detalhes do Pagamento</h3>
+                <ul>
+                  <li><strong>ID:</strong> {paymentResult.payment_id}</li>
+                  <li><strong>Valor:</strong> R$ {paymentResult.transaction_amount?.toFixed(2) || total.toFixed(2)}</li>
+                  <li><strong>Data:</strong> {new Date(paymentResult.date_created || new Date()).toLocaleString()}</li>
+                  {paymentResult.status_detail && (
+                    <li><strong>Status detalhado:</strong> {paymentResult.status_detail}</li>
+                  )}
+                  {paymentResult.payment_method && (
+                    <li><strong>Método:</strong> {paymentResult.payment_method}</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            
+            {/* Ações pós-pagamento */}
+            <div className={styles.paymentActions}>
+              {paymentResult.status === 'approved' && (
+                <button 
+                  className={styles.continueButton}
+                  onClick={handleClose}
+                >
+                  Continuar Comprando
+                </button>
+              )}
+              
+              {(paymentResult.status === 'rejected' || paymentResult.status === 'error') && (
+                <button 
+                  className={styles.tryAgainButton}
+                  onClick={() => setPaymentResult(null)}
+                >
+                  Tentar Novamente
+                </button>
+              )}
+            </div>
           </div>
         )}
 
-        {paymentStatus === 'rejected' && (
-          <div className={styles.errorMessage}>
-            <h3>❌ Pagamento Não Aprovado</h3>
-            <p>Tente novamente ou utilize outro método de pagamento.</p>
-          </div>
-        )}
-
-        {/* Resumo do pedido */}
-        <div className={styles.orderSummary}>
-          <div className={styles.summaryRow}>
-            <span>Subtotal:</span>
-            <span>{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-          </div>
-          <div className={styles.summaryRow}>
-            <span>Itens:</span>
-            <span>{userData?.items?.length || 0}</span>
-          </div>
-          <div className={styles.summaryTotal}>
-            <span>Total:</span>
-            <span>{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-          </div>
-        </div>
-
-        {/* Formulário de pagamento */}
-        <div id="payment-form-container" className={styles.paymentForm} />
-
-        {/* Overlay de processamento */}
+        {/* Loading durante processamento */}
         {processing && (
-          <div className={styles.processingOverlay}>
-            <div className={styles.spinner} />
+          <div className={styles.loadingOverlay}>
+            <div className={styles.spinner}></div>
             <p>Processando seu pagamento...</p>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-PaymentModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  total: PropTypes.number.isRequired,
-  user: PropTypes.object,
-  userData: PropTypes.shape({
-    items: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        name: PropTypes.string.isRequired,
-        price: PropTypes.number.isRequired,
-        quantity: PropTypes.number.isRequired
-      })
-    ).isRequired,
-    cpf: PropTypes.string
-  }).isRequired,
-  onSuccess: PropTypes.func.isRequired,
-  showToast: PropTypes.func.isRequired
-};
+}
 
 export default PaymentModal;

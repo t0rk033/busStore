@@ -1,171 +1,252 @@
 .profileContainer {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: var(--white);
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .profileHeader {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: var(--primary-color);
-  }
-  
-  .avatarSection {
-    display: flex;
-    justify-content: center;
-    margin: 1.5rem 0;
-  }
-  
-  .avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 4px solid var(--accent-color);
-  }
-  
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  .avatarPlaceholder {
-    width: 100%;
-    height: 100%;
-    background: var(--highlight-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white);
-  }
-  
-  .section {
-    margin-bottom: 2.5rem;
-    padding: 1.5rem;
-    background: var(--background-color);
-    border-radius: 8px;
-  }
-  
-  .section h2 {
-    color: var(--primary-color);
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  .field {
-    margin-bottom: 1rem;
-  }
-  
-  .field label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-color);
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-  
-  .input {
-    width: 100%;
-    padding: 0.8rem;
-    border: 2px solid var(--accent-color);
-    border-radius: 6px;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
-  }
-  
-  .input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
-  
-  .value {
-    padding: 0.8rem;
-    background: var(--white);
-    border-radius: 6px;
-    margin: 0;
-    min-height: 44px;
-    border: 2px solid transparent;
-  }
-  
-  .actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-  
-  button {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  button:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-  
-  .editButton {
-    background: var(--secondary-color);
-    color: var(--white);
-  }
-  
-  .saveButton {
-    background: var(--green);
-    color: var(--white);
-  }
-  
-  .cancelButton {
-    background: var(--highlight-color);
-    color: var(--text-color);
-  }
-  
-  .message {
-    text-align: center;
-    padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 6px;
-    background: var(--green);
-    color: var(--white);
-  }
-  
-  .loading,
-  .error {
-    text-align: center;
-    padding: 2rem;
-    font-size: 1.2rem;
-  }
-  
-  .error {
-    color: var(--secondary-color);
-  }
-  .signOutButton{
-    background-color: red;
-    color: white;
-    box-shadow: 1px 3px 6px rgba(0, 0, 0, 0.263);
-  }
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  font-family: 'Roboto', sans-serif;
+}
 
+.profileHeader {
+  text-align: center;
+  margin-bottom: 30px;
+}
 
-  /* Estilos para o histórico de compras */
+.profileHeader h1 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.avatarSection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #ffc107; /* Amarelo */
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ddd;
+  color: #666;
+  font-size: 1.5rem;
+  width: 100%;
+  height: 100%;
+}
+
+.section {
+  margin-bottom: 30px;
+}
+
+.section h2 {
+  font-size: 1.5rem;
+  color: #ffc107; /* Amarelo */
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-weight: bold;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.field input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.field input:focus {
+  border-color: #ffc107; /* Amarelo */
+  outline: none;
+}
+
+.value {
+  font-size: 1rem;
+  color: #333;
+  padding: 10px;
+  background-color: #f1f1f1;
+  border-radius: 8px;
+}
+
+.ordersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.orderCard {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.orderMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.orderId {
+  font-weight: bold;
+  color: #333;
+}
+
+.orderDate {
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.status {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status.shipped {
+  background-color: #ffc107; /* Amarelo */
+  color: #fff;
+}
+
+.status.processing {
+  background-color: #2196f3; /* Azul */
+  color: #fff;
+}
+
+.orderItems {
+  margin-bottom: 15px;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.orderTotal {
+  font-weight: bold;
+  color: #333;
+  text-align: right;
+}
+
+.signOutButton {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
+  background-color: #2196f3; /* Azul */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.signOutButton:hover {
+  background-color: #1976d2; /* Azul mais escuro */
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.saveButton,
+.cancelButton,
+.editButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.saveButton {
+  background-color: #ffc107; /* Amarelo */
+  color: #fff;
+}
+
+.saveButton:hover {
+  background-color: #e0a800; /* Amarelo mais escuro */
+}
+
+.cancelButton {
+  background-color: #f44336;
+  color: #fff;
+}
+
+.cancelButton:hover {
+  background-color: #d32f2f;
+}
+
+.editButton {
+  background-color: #2196f3; /* Azul */
+  color: #fff;
+}
+
+.editButton:hover {
+  background-color: #1976d2; /* Azul mais escuro */
+}
+
+.loading {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #777;
+}
+
+.emptyHistory {
+  text-align: center;
+  font-size: 1rem;
+  color: #777;
+}
+
+/* Estilos para o histórico de compras */
 .salesContainer {
   display: grid;
   gap: 1rem;

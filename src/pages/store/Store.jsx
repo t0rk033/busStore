@@ -253,10 +253,20 @@ function Store() {
   };
 
   // Componente de Pagamento
-  const PaymentModal = ({ open, onClose, total }) => {
+  const PaymentModal = ({ 
+    open, 
+    onClose, 
+    total, 
+    user, 
+    userData,
+    onSuccess,
+    showToast
+  }) => {
+    const [paymentResult, setPaymentResult] = useState(null);
+    const [processing, setProcessing] = useState(false);
     const [mp, setMp] = useState(null);
     const [formInitialized, setFormInitialized] = useState(false);
-
+  
     // Configura Mercado Pago
     useEffect(() => {
       if (open && !mp) {
@@ -266,64 +276,155 @@ function Store() {
           const publicKey = import.meta.env.VITE_MP_PUBLIC_KEY;
           setMp(new window.MercadoPago(publicKey, { locale: 'pt-BR' }));
         };
+        script.onerror = () => {
+          showToast('Erro ao carregar o sistema de pagamentos', 'error');
+        };
         document.body.appendChild(script);
         return () => document.body.removeChild(script);
       }
-    }, [open, mp]);
-    
-
+    }, [open, mp, showToast]);
+  
     // Processamento do pagamento
     useEffect(() => {
       if (mp && open && !formInitialized) {
-        mp.bricks().create('cardPayment', 'payment-form', {
+        const bricksBuilder = mp.bricks();
+  
+        bricksBuilder.create('cardPayment', 'payment-form-container', {
           initialization: {
             amount: total,
-            payer: { email: user?.email || "" },
+            payer: {
+              email: user?.email || '',
+              identification: {
+                type: 'CPF',
+                number: userData?.cpf || '',
+              },
+            },
           },
           callbacks: {
-            onReady: () => console.log('Brick está pronto'),
-            onError: (error) => {
-              console.error('Erro no brick:', error);
-              alert('Erro ao inicializar o formulário de pagamento. Tente novamente.');
-            },
+            onReady: () => console.log('Formulário de pagamento pronto'),
             onSubmit: async (cardFormData) => {
               try {
-                const { token, payer: { email } } = cardFormData;
-
-                // Envia para backend
-                const response = await fetch('http://localhost:3000/api/process-payment', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ token, amount: total, email }),
-                });
-
-                const data = await response.json();
-
-                if (data.status === 'approved') {
-                  await handleSuccessfulPayment(data.transactionId, email);
-                }
+                await handlePayment(cardFormData);
               } catch (error) {
-                console.error('Erro no processo:', error);
-                alert(error.message || 'Erro ao processar pagamento');
+                console.error('Erro no pagamento:', error);
+                showToast('Erro ao processar pagamento', 'error');
               }
+            },
+            onError: (error) => {
+              console.error('Erro no formulário:', error);
+              showToast('Erro no formulário de pagamento', 'error');
             },
           },
         });
+  
         setFormInitialized(true);
       }
-    }, [mp, open, total, formInitialized, user, handleSuccessfulPayment]);
-
+    }, [mp, open, total, user, userData, formInitialized]);
+  
+    const handlePayment = async (cardFormData) => {
+      setProcessing(true);
+      setPaymentResult(null);
+      
+      try {
+        const { token, payer: { email } } = cardFormData;
+  
+        const response = await fetch('http://localhost:3000/api/process-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token,
+            amount: total,
+            email,
+            identification_type: 'CPF',
+            identification_number: userData?.cpf || ''
+          }),
+        });
+  
+        const data = await response.json();
+  
+        if (!response.ok) {
+          throw new Error(data.message || 'Erro ao processar pagamento');
+        }
+  
+        setPaymentResult(data);
+        
+        // Se o pagamento foi aprovado, chama a função de sucesso
+        if (data.status === 'approved') {
+          await onSuccess(data.payment_id, email);
+        }
+      } catch (error) {
+        console.error('Erro no pagamento:', error);
+        setPaymentResult({
+          status: 'error',
+          message: error.message
+        });
+      } finally {
+        setProcessing(false);
+      }
+    };
+  
+    const handleClose = () => {
+      onClose();
+      // Reseta os estados após um pequeno delay
+      setTimeout(() => {
+        setPaymentResult(null);
+        setProcessing(false);
+      }, 300);
+    };
+  
     return (
       <div className={`${styles.paymentModalOverlay} ${open ? styles.open : ''}`}>
         <div className={styles.paymentModalContent}>
-          <h2>Finalizar Pagamento</h2>
-          <p>Total: R$ {total.toFixed(2)}</p>
-          <div className={styles.paymentFormContainer}>
-            <div id="payment-form" />
-          </div>
-          <button className={styles.modalCloseButton} onClick={onClose}>
-            <FiX size={24} />
+          <button
+            className={styles.closeButton}
+            onClick={handleClose}
+            disabled={processing}
+            aria-label="Fechar modal de pagamento"
+          >
+            &times;
           </button>
+  
+          {!paymentResult ? (
+            <>
+              <h2 className={styles.modalTitle}>Finalizar Pagamento</h2>
+              <p className={styles.totalAmount}>Total: R$ {total.toFixed(2)}</p>
+              
+              <div id="payment-form-container" className={styles.paymentFormContainer}></div>
+            </>
+          ) : (
+            <div className={styles.paymentResult}>
+              {paymentResult.status === 'approved' ? (
+                <div className={styles.successMessage}>
+                  <h3>✅ Pagamento Aprovado!</h3>
+                  <p>Sua compra foi processada com sucesso.</p>
+                  <p>ID da transação: {paymentResult.payment_id}</p>
+                </div>
+              ) : (
+                <div className={styles.errorMessage}>
+                  <h3>❌ Pagamento Não Aprovado</h3>
+                  <p>{paymentResult.message}</p>
+                  {paymentResult.status_detail && (
+                    <p>Detalhes: {paymentResult.status_detail}</p>
+                  )}
+                  <button 
+                    className={styles.tryAgainButton}
+                    onClick={() => setPaymentResult(null)}
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+  
+          {processing && (
+            <div className={styles.loadingOverlay}>
+              <div className={styles.spinner}></div>
+              <p>Processando pagamento...</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -661,7 +762,8 @@ function Store() {
       />
 
       {/* Modal de Pagamento */}
-      <PaymentModal
+{/* Modal de Pagamento */}
+<PaymentModal
   open={openPaymentModal}
   onClose={() => setOpenPaymentModal(false)}
   total={cartTotal + shippingCost}
