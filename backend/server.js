@@ -2,30 +2,57 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
 
 // Configuração do CORS
 app.use(cors({
-  origin: 'http://localhost:5173', // Permite requisições do frontend
-  methods: ['GET', 'POST'], // Métodos permitidos
-  allowedHeaders: ['Content-Type'], // Cabeçalhos permitidos
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
 }));
 
 // Middleware para parsear JSON
 app.use(express.json());
 
-// Configuração do Mercado Pago
+// Configuração do Mercado Pago (MANTIDO ORIGINAL)
 const client = new MercadoPagoConfig({
-  accessToken: 'TEST-2424042295647561-020514-9b1628e7f33b6ff8f121ea721bc3ffd7-1804058981', // Token de acesso do Mercado Pago
+  accessToken: 'TEST-2424042295647561-020514-9b1628e7f33b6ff8f121ea721bc3ffd7-1804058981',
 });
 
 const mercadoPago = {
   payment: new Payment(client)
 };
 
-// Mapeamento de status do Mercado Pago para respostas mais descritivas
+// Configuração do Nodemailer com Brevo (NOVO)
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_USER, // Seu e-mail de cadastro no Brevo
+    pass: process.env.BREVO_SMTP_PASS  // Senha SMTP gerada no painel
+  }
+});
+
+// Função para enviar e-mails (ATUALIZADA)
+async function sendEmail(to, subject, html) {
+  try {
+    await transporter.sendMail({
+      from: `BatataBowl <${process.env.BREVO_FROM_EMAIL}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log(`E-mail enviado para ${to}`);
+  } catch (error) {
+    console.error('Erro ao enviar e-mail:', error);
+  }
+}
+
+// Mapeamento de status do Mercado Pago (MANTIDO ORIGINAL)
 const paymentStatusMessages = {
   'approved': {
     status: 'approved',
@@ -69,12 +96,11 @@ const paymentStatusMessages = {
   }
 };
 
-// Endpoint para processar pagamentos
+// Endpoint para processar pagamentos (MANTIDO ORIGINAL)
 app.post('/api/process-payment', async (req, res) => {
   try {
-    const { token, amount, description, installments, payment_method_id, issuer_id, email } = req.body;
+    const { token, amount, description, installments, payment_method_id, issuer_id, email, items = [] } = req.body;
 
-    // Validação dos dados obrigatórios
     if (!token || !amount || !email) {
       return res.status(400).json({
         status: 'invalid_request',
@@ -101,14 +127,49 @@ app.post('/api/process-payment', async (req, res) => {
 
     const paymentResponse = await mercadoPago.payment.create({ body: paymentData });
 
-    // Obter a resposta padrão baseada no status
+    // Envio de e-mails se pagamento aprovado (ATUALIZADO)
+    if (paymentResponse.status === 'approved') {
+      // E-mail para o cliente
+      const buyerEmail = `
+        <h1 style="color: #ff6b00;">Obrigado por comprar no BatataBowl!</h1>
+        <p>Seu pedido #${paymentResponse.id} foi confirmado.</p>
+        <h3>Resumo da compra:</h3>
+        <ul>
+          ${items.map(item => `
+            <li>${item.name} - ${item.quantity}x R$ ${item.price.toFixed(2)}</li>
+          `).join('')}
+        </ul>
+        <p><strong>Total: R$ ${amount.toFixed(2)}</strong></p>
+        <p>Qualquer dúvida, responda este e-mail.</p>
+      `;
+
+      // E-mail para o admin
+      const adminEmail = `
+        <h1>Nova venda #${paymentResponse.id}</h1>
+        <p><strong>Cliente:</strong> ${email}</p>
+        <h3>Itens:</h3>
+        <ul>
+          ${items.map(item => `
+            <li>${item.name} - ${item.quantity}x R$ ${item.price.toFixed(2)}</li>
+          `).join('')}
+        </ul>
+        <p><strong>Total:</strong> R$ ${amount.toFixed(2)}</p>
+        <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+      `;
+
+      await Promise.all([
+        sendEmail(email, '✅ Compra confirmada - BatataBowl', buyerEmail),
+        sendEmail(process.env.ADMIN_EMAIL, `🛒 Nova venda #${paymentResponse.id}`, adminEmail)
+      ]);
+    }
+
+    // Resposta original (mantida)
     const statusResponse = paymentStatusMessages[paymentResponse.status] || {
       status: paymentResponse.status,
       message: 'Status de pagamento desconhecido',
       description: 'O status do pagamento não pôde ser determinado.'
     };
 
-    // Montar resposta completa
     const response = {
       ...statusResponse,
       payment_id: paymentResponse.id,
@@ -127,7 +188,6 @@ app.post('/api/process-payment', async (req, res) => {
       payer: paymentResponse.payer
     };
 
-    // Status HTTP baseado no resultado do pagamento
     const httpStatus = paymentResponse.status === 'approved' ? 200 : 
                       paymentResponse.status === 'pending' ? 202 : 400;
 
@@ -136,7 +196,6 @@ app.post('/api/process-payment', async (req, res) => {
   } catch (error) {
     console.error('Erro no processamento do pagamento:', error);
 
-    // Tratamento específico para erros do Mercado Pago
     if (error.response && error.response.data) {
       const mpError = error.response.data;
       return res.status(400).json({
@@ -148,7 +207,6 @@ app.post('/api/process-payment', async (req, res) => {
       });
     }
 
-    // Erro genérico
     return res.status(500).json({
       status: 'server_error',
       message: 'Erro interno no servidor',
@@ -157,11 +215,10 @@ app.post('/api/process-payment', async (req, res) => {
   }
 });
 
-// Endpoint para calcular frete com Melhor Envio
+// Endpoint para calcular frete (MANTIDO ORIGINAL)
 app.post('/api/shipping-quote', async (req, res) => {
   const { cepDestino, produtos } = req.body;
 
-  // Validação básica
   if (!cepDestino || !Array.isArray(produtos) || produtos.length === 0) {
     return res.status(400).json({ 
       status: 'invalid_request',
@@ -171,34 +228,31 @@ app.post('/api/shipping-quote', async (req, res) => {
   }
 
   try {
-    // Mapear os produtos para o formato exigido pela API da Melhor Envio
     const items = produtos.map(produto => ({
-      width: produto.width || 10, // Largura do produto (valor padrão 10 cm)
-      height: produto.height || 10, // Altura do produto (valor padrão 10 cm)
-      length: produto.length || 10, // Comprimento do produto (valor padrão 10 cm)
-      weight: produto.weight || 0.5, // Peso do produto (valor padrão 0.5 kg)
-      insurance_value: produto.insurance_value || 0, // Valor do seguro (opcional)
-      quantity: produto.quantity, // Quantidade do produto
+      width: produto.width || 10,
+      height: produto.height || 10,
+      length: produto.length || 10,
+      weight: produto.weight || 0.5,
+      insurance_value: produto.insurance_value || 0,
+      quantity: produto.quantity,
     }));
 
-    // Envia a requisição para a API do Melhor Envio
     const response = await axios.post(
       'https://sandbox.melhorenvio.com.br/api/v2/me/shipment/calculate',
       {
-        from: { postal_code: '36047040' }, // CEP da loja de origem (exemplo)
-        to: { postal_code: cepDestino }, // CEP do cliente
-        products: items, // Lista de produtos
+        from: { postal_code: '36047040' },
+        to: { postal_code: cepDestino },
+        products: items,
       },
       {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': `Bearer ${process.env.MELHOR_ENVIO_TOKEN}`, // Token de autenticação do Melhor Envio
+          'Authorization': `Bearer ${process.env.MELHOR_ENVIO_TOKEN}`,
         },
       }
     );
 
-    // Retorna as opções de frete para o frontend com estrutura padronizada
     res.json({
       status: 'success',
       data: response.data,
@@ -228,4 +282,13 @@ app.get('/', (req, res) => {
 // Inicia o servidor
 app.listen(3000, () => {
   console.log('Backend rodando na porta 3000');
+  
+  // Verifica conexão SMTP
+  transporter.verify((error) => {
+    if (error) {
+      console.error('Erro na conexão SMTP:', error);
+    } else {
+      console.log('Conexão SMTP configurada com sucesso');
+    }
+  });
 });

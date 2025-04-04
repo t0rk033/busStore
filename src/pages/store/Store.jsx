@@ -172,7 +172,13 @@ function Store() {
           method: 'Mercado Pago',
           status: 'approved',
           transactionId,
-          email
+          email,
+          items: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
         },
         user: user?.uid ? {
           uid: user.uid,
@@ -232,11 +238,18 @@ function Store() {
         throw new Error(errorData.message || 'Erro ao calcular frete');
       }
   
-      const shippingData = await response.json();
-      console.log('Resposta da API de frete:', shippingData); // Inspecione a resposta
+      const { data } = await response.json(); // Extrai a propriedade 'data' da resposta
+      console.log('Resposta da API de frete:', data);
+  
+      // Verifica se data existe e é um array
+      if (!Array.isArray(data)) {
+        throw new Error('Formato inválido de resposta da API de frete');
+      }
   
       // Filtra apenas as opções de frete válidas (sem erro) e que correspondem ao SEDEX
-      const validShippingOptions = shippingData.filter(option => !option.error && option.name.includes('SEDEX'));
+      const validShippingOptions = data.filter(option => 
+        option && !option.error && option.name?.includes('SEDEX')
+      );
   
       if (validShippingOptions.length === 0) {
         showToast('Nenhuma opção de frete SEDEX disponível para o CEP informado.', 'error');
@@ -251,7 +264,6 @@ function Store() {
       showToast(error.message || 'Erro ao calcular frete. Tente novamente.', 'error');
     }
   };
-
   // Componente de Pagamento
   const PaymentModal = ({ 
     open, 
