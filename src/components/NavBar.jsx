@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import styles from './Navbar.module.css';
 import logo from '../assets/images/logo.png';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { FaBars } from 'react-icons/fa'; // Importando ícone de hambúrguer
 
 function NavBar() {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const navigate = useNavigate(); // Hook para redirecionamento
 
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu
@@ -24,8 +25,7 @@ function NavBar() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // Redirecionar para a página inicial após logout
-      window.location.href = '/';
+      navigate('/'); // Redireciona para a página principal
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -49,9 +49,14 @@ function NavBar() {
             {/* <Link to='/reservas'>Reservas</Link> */}
             <div className={styles.account}>
               {userLoggedIn ? (
-                <Link to='/perfil' className={styles.logoutButton}>
-                  Conta
-                </Link>
+                <>
+                  <Link to='/perfil' className={styles.logoutButton}>
+                    Conta
+                  </Link>
+                  <button onClick={handleLogout} className={styles.logoutButton}>
+                    Sair
+                  </button>
+                </>
               ) : (
                 <Link to="/login">Entrar</Link>
               )}

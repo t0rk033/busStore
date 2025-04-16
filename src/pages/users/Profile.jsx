@@ -48,25 +48,23 @@ function Profile() {
     const fetchSalesHistory = async () => {
       if (user) {
         try {
-          // Busca as vendas na coleção 'sales' filtrando pelo UID do usuário logado
           const salesQuery = query(
-            collection(db, 'sales'),
-            where('user.uid', '==', user.uid)
+            collection(db, "sales"),
+            where("user.uid", "==", user.uid)
           );
           const salesSnapshot = await getDocs(salesQuery);
 
           const orders = salesSnapshot.docs.map((doc) => ({
             id: doc.id,
-            date: doc.data().date?.toDate().toLocaleDateString('pt-BR'),
+            date: doc.data().date?.toDate().toLocaleDateString("pt-BR"),
             total: doc.data().total,
-            status: doc.data().payment?.status || 'Desconhecido',
+            status: doc.data().status || "Pendente",
             items: doc.data().items || [],
           }));
 
-          // Ordena os pedidos por data (do mais recente para o mais antigo)
           setSalesHistory(orders.sort((a, b) => new Date(b.date) - new Date(a.date)));
         } catch (error) {
-          console.error('Erro ao carregar histórico de pedidos:', error);
+          console.error("Erro ao carregar histórico de pedidos:", error);
           setMessage('Erro ao carregar histórico de pedidos');
         } finally {
           setLoading(false);
@@ -100,6 +98,20 @@ function Profile() {
   // Função para logout
   const handleSignOut = () => {
     signOut(auth).catch((error) => console.error('Erro ao sair:', error));
+  };
+
+  // Função para confirmar entrega
+  const confirmDelivery = async (saleId) => {
+    try {
+      await updateDoc(doc(db, "sales", saleId), { status: "Entregue" });
+      setSalesHistory((prev) =>
+        prev.map((sale) =>
+          sale.id === saleId ? { ...sale, status: "Entregue" } : sale
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao confirmar entrega:", error);
+    }
   };
 
   if (loading) return <div className={styles.loading}>Carregando...</div>;
@@ -260,9 +272,25 @@ function Profile() {
                           <FaCalendarAlt /> {order.date}
                         </span>
                       </div>
-                      <div className={`${styles.status} ${order.status === 'approved' ? styles.shipped : styles.processing}`}>
+                      <div
+                        className={`${styles.status} ${
+                          order.status === "Enviado"
+                            ? styles.shipped
+                            : order.status === "Entregue"
+                            ? styles.delivered
+                            : styles.processing
+                        }`}
+                      >
                         {order.status}
                       </div>
+                      {order.status === "Enviado" && (
+                        <button
+                          className={styles.confirmButton}
+                          onClick={() => confirmDelivery(order.id)}
+                        >
+                          Confirmar Entrega
+                        </button>
+                      )}
                     </div>
                     <div className={styles.orderItems}>
                       {order.items.map((item, index) => (

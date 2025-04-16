@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import NavBar from "../../components/NavBar";
 import Footer from '../../components/Footer';
 import { FiSearch, FiX, FiShoppingCart, FiTruck, FiTag, FiChevronRight, FiTrash, FiHeart, FiStar } from 'react-icons/fi';
-import ProductModal from './ProductModal'; // Importe o componente ProductModal
+import ProductModal from './ProductModal';
 
 function Store() {
   const { addItem, items, removeItem, updateItemQuantity, cartTotal, emptyCart } = useCart();
@@ -30,8 +30,30 @@ function Store() {
   const [cep, setCep] = useState('');
   const [shippingOptions, setShippingOptions] = useState([]);
   const [shippingCost, setShippingCost] = useState(0);
+  
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage, setProductsPerPage] = useState(12);
 
   const navigate = useNavigate();
+
+  // Função para obter os produtos da página atual
+  const getCurrentProducts = useCallback(() => {
+    const indexOfLastProduct = currentPage * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    return filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  }, [currentPage, productsPerPage, filteredProducts]);
+
+  // Função para mudar de página
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // Efeito para rolar para o topo ao mudar de página
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth', // Animação suave
+    });
+  }, [currentPage]);
 
   // Função para exibir toasts
   const showToast = useCallback((message, type = 'info') => {
@@ -77,7 +99,7 @@ function Store() {
     fetchProducts();
   }, [showToast]);
 
-  // Filtra produtos com base nos critérios
+  // Filtra produtos com base nos critérios e reseta para a primeira página
   useEffect(() => {
     const filtered = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -88,6 +110,7 @@ function Store() {
       return matchesSearch && matchesCategory && matchesPrice;
     });
     setFilteredProducts(filtered);
+    setCurrentPage(1); // Resetar para a primeira página quando os filtros mudam
   }, [searchTerm, selectedCategory, minPrice, maxPrice, products]);
 
   // Limpa filtros
@@ -238,15 +261,13 @@ function Store() {
         throw new Error(errorData.message || 'Erro ao calcular frete');
       }
   
-      const { data } = await response.json(); // Extrai a propriedade 'data' da resposta
+      const { data } = await response.json();
       console.log('Resposta da API de frete:', data);
   
-      // Verifica se data existe e é um array
       if (!Array.isArray(data)) {
         throw new Error('Formato inválido de resposta da API de frete');
       }
   
-      // Filtra apenas as opções de frete válidas (sem erro) e que correspondem ao SEDEX
       const validShippingOptions = data.filter(option => 
         option && !option.error && option.name?.includes('SEDEX')
       );
@@ -256,14 +277,40 @@ function Store() {
         return;
       }
   
-      // Define as opções de frete e o custo do frete selecionado
       setShippingOptions(validShippingOptions);
-      setShippingCost(parseFloat(validShippingOptions[0].price)); // Usa o preço da primeira opção válida
+      setShippingCost(parseFloat(validShippingOptions[0].price));
     } catch (error) {
       console.error('Erro ao calcular frete:', error);
       showToast(error.message || 'Erro ao calcular frete. Tente novamente.', 'error');
     }
   };
+
+  const handleAddToCart = (productWithDetails) => {
+    addItem({
+      ...productWithDetails,
+      id: `${productWithDetails.id}-${productWithDetails.variation.color}-${productWithDetails.variation.size}`,
+    });
+    showToast('Produto adicionado ao carrinho!', 'success');
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      showToast('Você precisa estar logado para finalizar a compra.', 'error');
+      navigate('/login');
+      return;
+    }
+  
+    if (items.length === 0) {
+      showToast('Seu carrinho está vazio.', 'error');
+      return;
+    }
+  
+    const stockOk = await checkStock();
+    if (stockOk) {
+      setOpenPaymentModal(true);
+    }
+  };
+
   // Componente de Pagamento
   const PaymentModal = ({ 
     open, 
@@ -279,7 +326,6 @@ function Store() {
     const [mp, setMp] = useState(null);
     const [formInitialized, setFormInitialized] = useState(false);
   
-    // Configura Mercado Pago
     useEffect(() => {
       if (open && !mp) {
         const script = document.createElement('script');
@@ -296,7 +342,6 @@ function Store() {
       }
     }, [open, mp, showToast]);
   
-    // Processamento do pagamento
     useEffect(() => {
       if (mp && open && !formInitialized) {
         const bricksBuilder = mp.bricks();
@@ -362,7 +407,6 @@ function Store() {
   
         setPaymentResult(data);
         
-        // Se o pagamento foi aprovado, chama a função de sucesso
         if (data.status === 'approved') {
           await onSuccess(data.payment_id, email);
         }
@@ -379,7 +423,6 @@ function Store() {
   
     const handleClose = () => {
       onClose();
-      // Reseta os estados após um pequeno delay
       setTimeout(() => {
         setPaymentResult(null);
         setProcessing(false);
@@ -442,34 +485,13 @@ function Store() {
     );
   };
 
-  const handleAddToCart = (productWithDetails) => {
-    addItem({
-      ...productWithDetails,
-      id: `${productWithDetails.id}-${productWithDetails.variation.color}-${productWithDetails.variation.size}`,
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth', // Adiciona uma animação suave ao scroll
     });
-    showToast('Produto adicionado ao carrinho!', 'success');
-  };
+  }, [currentPage]);
 
-  // Função para verificar se o usuário está logado antes de finalizar a compra
-  const handleCheckout = async () => {
-    if (!user) {
-      showToast('Você precisa estar logado para finalizar a compra.', 'error');
-      navigate('/login');
-      return;
-    }
-  
-    // Verifique se há itens no carrinho
-    if (items.length === 0) {
-      showToast('Seu carrinho está vazio.', 'error');
-      return;
-    }
-  
-    // Verifique o estoque antes de abrir o modal de pagamento
-    const stockOk = await checkStock();
-    if (stockOk) {
-      setOpenPaymentModal(true);
-    }
-  };
   return (
     <div className={styles.storeWrapper}>
       <NavBar />
@@ -540,84 +562,136 @@ function Store() {
       {/* Grade de Produtos */}
       <div className={styles.productsSection}>
         <h2 className={styles.sectionTitle}>Todos os Produtos</h2>
-        <div className={styles.productGrid}>
-  {filteredProducts.map(product => (
-    <div 
-      key={product.id} 
-      className={styles.productCard}
-      onClick={() => {
-        setSelectedProduct(product);
-        setOpenProductModal(true);
-      }}
-    >
-      <div className={styles.productImageContainer}>
-        <div className={styles.imageWrapper}>
-          <img 
-            src={product.imageUrls[0]} 
-            alt={product.name} 
-            className={styles.productImage}
-            loading="lazy" // Lazy loading for better performance
-          />
-          {product.discount > 0 && (
-            <span className={styles.discountBadge}>-{product.discount}%</span>
-          )}
-          <button 
-            className={styles.favoriteButton}
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering card click
-              /* Favorite logic here */
+        
+        {/* Seletor de produtos por página */}
+        <div className={styles.productsPerPageSelector}>
+          <span>Produtos por página:</span>
+          <select 
+            value={productsPerPage}
+            onChange={(e) => {
+              setProductsPerPage(Number(e.target.value));
+              setCurrentPage(1);
             }}
           >
-            <FiHeart size={20} />
-          </button>
+            <option value="12">12</option>
+            <option value="24">24</option>
+            <option value="36">36</option>
+            <option value="48">48</option>
+          </select>
         </div>
-      </div>
-      
-      <div className={styles.productDetails}>
-        <div className={styles.productHeader}>
-          <h3 className={styles.productTitle}>{product.name}</h3>
-          <div className={styles.rating}>
-            {[...Array(5)].map((_, i) => (
-              <FiStar 
-                key={i} 
-                size={16} 
-                className={i < product.rating ? styles.filledStar : styles.emptyStar}
-              />
-            ))}
-          </div>
+
+        <div className={styles.productGrid}>
+          {getCurrentProducts().map(product => (
+            <div 
+              key={product.id} 
+              className={styles.productCard}
+              onClick={() => {
+                setSelectedProduct(product);
+                setOpenProductModal(true);
+              }}
+            >
+              <div className={styles.productImageContainer}>
+                <div className={styles.imageWrapper}>
+                  <img 
+                    src={product.imageUrls[0]} 
+                    alt={product.name} 
+                    className={styles.productImage}
+                    loading="lazy"
+                  />
+                  {product.discount > 0 && (
+                    <span className={styles.discountBadge}>-{product.discount}%</span>
+                  )}
+                  <button 
+                    className={styles.favoriteButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <FiHeart size={20} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className={styles.productDetails}>
+                <div className={styles.productHeader}>
+                  <h3 className={styles.productTitle}>{product.name}</h3>
+                  <div className={styles.rating}>
+                    {[...Array(5)].map((_, i) => (
+                      <FiStar 
+                        key={i} 
+                        size={16} 
+                        className={i < product.rating ? styles.filledStar : styles.emptyStar}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className={styles.priceContainer}>
+                  {product.discount > 0 ? (
+                    <>
+                      <span className={styles.originalPrice}>
+                        R$ {product.originalPrice.toFixed(2)}
+                      </span>
+                      <span className={styles.discountedPrice}>
+                        R$ {product.salePrice.toFixed(2)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className={styles.regularPrice}>
+                      R$ {product.salePrice.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                
+                <button 
+                  className={styles.addToCartButton}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProduct(product);
+                    setOpenProductModal(true);
+                  }}
+                >
+                  <FiShoppingCart size={16} /> Adicionar
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-        
-        <div className={styles.priceContainer}>
-          {product.discount > 0 ? (
-            <>
-              <span className={styles.originalPrice}>
-                R$ {product.originalPrice.toFixed(2)}
-              </span>
-              <span className={styles.discountedPrice}>
-                R$ {product.salePrice.toFixed(2)}
-              </span>
-            </>
-          ) : (
-            <span className={styles.regularPrice}>
-              R$ {product.salePrice.toFixed(2)}
-            </span>
+
+        {/* Paginação */}
+        <div className={styles.paginationContainer}>
+          {filteredProducts.length > productsPerPage && (
+            <div className={styles.pagination}>
+              <button
+                onClick={() => paginate(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={styles.paginationButton}
+              >
+                &laquo; Anterior
+              </button>
+              
+              {Array.from({ length: Math.ceil(filteredProducts.length / productsPerPage) }).map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => paginate(index + 1)}
+                  className={`${styles.paginationButton} ${
+                    currentPage === index + 1 ? styles.activePage : ''
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => paginate(currentPage + 1)}
+                disabled={currentPage === Math.ceil(filteredProducts.length / productsPerPage)}
+                className={styles.paginationButton}
+              >
+                Próxima &raquo;
+              </button>
+            </div>
           )}
         </div>
-        
-        <button 
-          className={styles.addToCartButton}
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent triggering card click
-            setSelectedProduct(product);
-            setOpenProductModal(true);
-          }}
-        >
-          <FiShoppingCart size={16} /> Adicionar
-        </button>
-      </div>
-    </div>
-  ))}
-</div>
       </div>
 
       {/* Toast Notification */}
@@ -774,36 +848,35 @@ function Store() {
       />
 
       {/* Modal de Pagamento */}
-{/* Modal de Pagamento */}
-<PaymentModal
-  open={openPaymentModal}
-  onClose={() => setOpenPaymentModal(false)}
-  total={cartTotal + shippingCost}
-  user={user}
-  userData={{
-    items: items.map(item => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      variation: item.variation
-    })),
-    cpf: userData?.cpf || ''
-  }}
-  onSuccess={handleSuccessfulPayment}
-  showToast={showToast}
-/>
+      <PaymentModal
+        open={openPaymentModal}
+        onClose={() => setOpenPaymentModal(false)}
+        total={cartTotal + shippingCost}
+        user={user}
+        userData={{
+          items: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            variation: item.variation
+          })),
+          cpf: userData?.cpf || ''
+        }}
+        onSuccess={handleSuccessfulPayment}
+        showToast={showToast}
+      />
 
       {/* Modal de Produto */}
       <ProductModal
-  open={openProductModal}
-  onClose={() => {
-    setOpenProductModal(false);  // Fecha o modal
-    setSelectedProduct(null);    // Limpa o produto selecionado
-  }}
-  product={selectedProduct}
-  addToCart={handleAddToCart}
-/>
+        open={openProductModal}
+        onClose={() => {
+          setOpenProductModal(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        addToCart={handleAddToCart}
+      />
 
       <Footer />
     </div>

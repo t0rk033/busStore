@@ -592,34 +592,19 @@ body {
 /* Filtros */
 .filtersContainer {
   display: flex;
+  justify-content: space-between;
   gap: 1rem;
-  padding: 2rem;
+  margin-bottom: 2rem;
+  padding: 1rem 2rem;
   background: var(--white);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  margin: 2rem auto;
   max-width: 1200px;
+  margin: 2rem auto;
 }
 
 .filterSection {
   flex: 1;
-}
-
-.filterTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.categoryFilter {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
 }
 
 .priceRange {
@@ -634,10 +619,6 @@ body {
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 1rem;
-}
-
-.priceSeparator {
-  color: var(--text-light);
 }
 
 .clearFiltersButton {
@@ -655,6 +636,26 @@ body {
 
 .clearFiltersButton:hover {
   background: #1C2833;
+}
+
+.categoryFilter,
+.priceInput,
+.clearFiltersButton {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.clearFiltersButton {
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.clearFiltersButton:hover {
+  background-color: var(--primary-color-dark);
 }
 
 /* Toast Notification */
@@ -898,6 +899,64 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Paginação */
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0;
+  width: 100%;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.paginationButton {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  text-align: center;
+}
+
+.paginationButton:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+.paginationButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.activePage {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Seletor de produtos por página */
+.productsPerPageSelector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: flex-end;
+}
+
+.productsPerPageSelector select {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: white;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -910,5 +969,41 @@ body {
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* Estilos gerais da barra de filtros */
+.filtersContainer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Estilos para dispositivos móveis */
+@media (max-width: 768px) {
+  .filtersContainer {
+    flex-direction: column; /* Empilha os filtros verticalmente */
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .filterSection {
+    width: 100%; /* Garante que cada filtro ocupe toda a largura */
+  }
+
+  .priceRange {
+    display: flex;
+    flex-direction: column; /* Empilha os campos de preço */
+    gap: 0.5rem;
+  }
+
+  .priceInput {
+    width: 100%; /* Garante que os campos de entrada ocupem toda a largura */
+  }
+
+  .clearFiltersButton {
+    width: 100%; /* Botão de limpar filtros ocupa toda a largura */
+    text-align: center;
   }
 }

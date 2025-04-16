@@ -146,11 +146,16 @@
 }
 
 .status.shipped {
-  background-color: #ffc107; /* Amarelo */
+  background-color: #4caf50; /* Verde */
   color: #fff;
 }
 
 .status.processing {
+  background-color: #ff9800; /* Laranja */
+  color: #fff;
+}
+
+.status.delivered {
   background-color: #2196f3; /* Azul */
   color: #fff;
 }
@@ -302,4 +307,19 @@
   border: 2px dashed #ddd;
   border-radius: 8px;
   margin-top: 1rem;
+}
+
+.confirmButton {
+  padding: 5px 10px;
+  background-color: #4caf50; /* Verde */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.confirmButton:hover {
+  background-color: #388e3c; /* Verde mais escuro */
 }

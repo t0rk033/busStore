@@ -110,6 +110,7 @@ function StockManagement() {
   const [filter, setFilter] = useState("pending");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState({});
+  const [deliveredSales, setDeliveredSales] = useState([]);
 
   const handleNoteChange = (id, value) => {
     setNotes((prev) => ({ ...prev, [id]: value }));
@@ -198,6 +199,7 @@ function StockManagement() {
         );
 
         setSales(salesData);
+        setDeliveredSales(salesData.filter((sale) => sale.status === "Entregue"));
         setTotalSales(salesData.reduce((acc, sale) => acc + sale.total, 0));
       }
     );
@@ -489,14 +491,40 @@ function StockManagement() {
   // =================== Order Functions ===================
   const markAsShipped = async (saleId) => {
     try {
-      await updateDoc(doc(db, "sales", saleId), { shipped: true });
+      await updateDoc(doc(db, "sales", saleId), { shipped: true, status: "Enviado" });
       setSales((prev) =>
         prev.map((sale) =>
-          sale.id === saleId ? { ...sale, shipped: true } : sale
+          sale.id === saleId ? { ...sale, shipped: true, status: "Enviado" } : sale
         )
       );
     } catch (error) {
       console.error("Error updating order:", error);
+    }
+  };
+
+  const unmarkAsShipped = async (saleId) => {
+    try {
+      await updateDoc(doc(db, "sales", saleId), { shipped: false, status: "Pendente" });
+      setSales((prev) =>
+        prev.map((sale) =>
+          sale.id === saleId ? { ...sale, shipped: false, status: "Pendente" } : sale
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao desmarcar como enviado:", error);
+    }
+  };
+
+  const confirmDelivery = async (saleId) => {
+    try {
+      await updateDoc(doc(db, "sales", saleId), { status: "Entregue" });
+      setSalesHistory((prev) =>
+        prev.map((sale) =>
+          sale.id === saleId ? { ...sale, status: "Entregue" } : sale
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao confirmar entrega:", error);
     }
   };
 
@@ -554,12 +582,9 @@ function StockManagement() {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {[
               { id: "products", icon: <Inventory />, label: "Produtos" },
-              {
-                id: "suppliers",
-                icon: <BusinessIcon />,
-                label: "Fornecedores",
-              },
+              { id: "suppliers", icon: <BusinessIcon />, label: "Fornecedores" },
               { id: "orders", icon: <LocalShipping />, label: "Pedidos" },
+              { id: "delivered", icon: <CheckCircle />, label: "Entregues" },
               { id: "reports", icon: <TrendingUp />, label: "Relatórios" },
             ].map((item) => (
               <Button
@@ -1683,10 +1708,16 @@ function StockManagement() {
                             <Button
                               variant="contained"
                               startIcon={<LocalShipping />}
-                              onClick={() => markAsShipped(sale.id)}
+                              onClick={() =>
+                                sale.shipped
+                                  ? unmarkAsShipped(sale.id)
+                                  : markAsShipped(sale.id)
+                              }
                               sx={{ borderRadius: 3 }}
                             >
-                              Marcar como Enviado
+                              {sale.shipped
+                                ? "Desmarcar Enviado"
+                                : "Marcar como Enviado"}
                             </Button>
                           </Box>
 
@@ -1787,6 +1818,90 @@ zipCode}
                           >
                             Imprimir
                           </Button>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {activeView === "delivered" && (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 4,
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <CheckCircle
+                    sx={{
+                      fontSize: 40,
+                      color: theme.palette.success.main,
+                      bgcolor: theme.palette.success.light,
+                      p: 1.5,
+                      borderRadius: 4,
+                    }}
+                  />
+                  <Typography variant="h4" fontWeight="700">
+                    Pedidos Entregues
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Card sx={{ mb: 4 }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+                    Lista de Pedidos Entregues
+                    <Chip
+                      label={`${deliveredSales.length} entregues`}
+                      size="small"
+                      sx={{ ml: 2, bgcolor: "action.selected" }}
+                    />
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {deliveredSales.map((sale) => (
+                      <Grid item xs={12} key={sale.id}>
+                        <Paper
+                          variant="outlined"
+                          sx={{ p: 2, borderRadius: 3 }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Box>
+                              <Typography
+                                variant="subtitle2"
+                                color="textSecondary"
+                              >
+                                #{sale.id.slice(0, 8).toUpperCase()} •{" "}
+                                {sale.date?.toLocaleDateString("pt-BR")}
+                              </Typography>
+                              <Typography variant="body1" fontWeight="500">
+                                {sale.user?.details.fullName ||
+                                  "Cliente não identificado"}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {sale.items.length} itens • R${" "}
+                                {sale.total.toFixed(2)}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label="Entregue"
+                              color="success"
+                              variant="outlined"
+                            />
+                          </Box>
                         </Paper>
                       </Grid>
                     ))}
