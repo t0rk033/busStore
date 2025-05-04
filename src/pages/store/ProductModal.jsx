@@ -20,19 +20,22 @@ import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import styles from './ProductModal.module.css'; // Import your CSS module
 
 const style = {
   position: 'absolute',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800,
-  maxWidth: '90%',
+  width: '90%',
+  maxWidth: '800px',
+  maxHeight: '90vh', // Limita a altura máxima do modal
   bgcolor: 'background.paper',
   boxShadow: 24,
   borderRadius: '12px',
   p: 4,
   outline: 'none',
+  overflowY: 'auto', // Adiciona rolagem vertical
 };
 
 function ProductModal({ open, onClose, product, addToCart }) {
@@ -110,7 +113,7 @@ function ProductModal({ open, onClose, product, addToCart }) {
           </Grid>
 
           {/* Detalhes do Produto */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={6} className={styles.productDetails}>
             <Typography variant="body1" color="text.secondary" gutterBottom>
               {product.description}
             </Typography>

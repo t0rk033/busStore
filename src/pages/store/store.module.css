@@ -49,6 +49,11 @@ body {
   font-size: 1.25rem;
   font-weight: 300;
   margin-bottom: 2rem;
+  color: white; /* Garante que o texto seja branco */
+  background-color: rgba(0, 0, 0, 0.6); /* Fundo preto semitransparente */
+  padding: 10px 20px; /* Espaçamento interno */
+  border-radius: 8px; /* Bordas arredondadas */
+  display: inline-block; /* Ajusta o tamanho do fundo ao texto */
 }
 
 .searchBar {
